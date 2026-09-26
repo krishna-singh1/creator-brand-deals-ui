@@ -6,6 +6,8 @@ import { useEffect } from "react";
 import type { Me } from "@/lib/api/client";
 import { homeFor, needsOnboarding, useMe } from "@/lib/session";
 
+import { Skeleton } from "./ui";
+
 type Role = NonNullable<Me["role"]>;
 
 /**
@@ -42,11 +44,41 @@ export function RequireSession({
     return <CenteredMessage>Couldn&apos;t reach BrandDeal. Please refresh.</CenteredMessage>;
   }
   if (isPending || redirect || !me) {
-    return <CenteredMessage>Loading…</CenteredMessage>;
+    return <PageSkeleton />;
   }
   return <>{children(me)}</>;
 }
 
 export function CenteredMessage({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-1 items-center justify-center p-8 text-sm text-zinc-500">{children}</div>;
+  return (
+    <div className="flex flex-1 animate-fade-in items-center justify-center p-8 text-sm tracking-wide text-zinc-500">{children}</div>
+  );
+}
+
+/** Elegant placeholder shown while the session or page data loads. */
+export function PageSkeleton() {
+  return (
+    <div role="status" aria-label="Loading" className="mx-auto flex w-full max-w-6xl flex-1 animate-fade-in flex-col gap-8 px-6 py-24">
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="h-12 w-2/3 max-w-lg" />
+      <div className="grid gap-6 sm:grid-cols-3">
+        <Skeleton className="h-36" />
+        <Skeleton className="h-36" />
+        <Skeleton className="h-36" />
+      </div>
+      <Skeleton className="h-64" />
+    </div>
+  );
+}
+
+/** Skeleton for page content inside the app shell (profile forms, detail pages). */
+export function ContentSkeleton() {
+  return (
+    <div role="status" aria-label="Loading" className="flex animate-fade-in flex-col gap-6">
+      <Skeleton className="h-4 w-28" />
+      <Skeleton className="h-11 w-1/2 max-w-md" />
+      <Skeleton className="h-72" />
+      <Skeleton className="h-48" />
+    </div>
+  );
 }

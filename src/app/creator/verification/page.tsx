@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { CenteredMessage, RequireSession } from "@/components/require-session";
+import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, SectionTitle, StatusBadge, Textarea } from "@/components/ui";
 import { api, ApiRequestError, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, humanizeMissing } from "@/lib/format";
 import { ME_KEY } from "@/lib/session";
 import { uploadFile } from "@/lib/upload";
 
@@ -38,7 +38,7 @@ function Verification() {
       }
     },
   });
-  if (!profile || latest.isPending) return <CenteredMessage>Loading…</CenteredMessage>;
+  if (!profile || latest.isPending) return <ContentSkeleton />;
 
   const request = latest.data;
   const canSubmit = profile.status === "DRAFT" || profile.status === "REJECTED";
@@ -46,7 +46,7 @@ function Verification() {
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Verification</h1>
+        <h1 className="font-display text-4xl tracking-tight text-ink">Verification</h1>
         <StatusBadge status={profile.status} />
       </div>
 
@@ -89,8 +89,8 @@ function Verification() {
         ((profile.missingFields ?? []).length > 0 ? (
           <Card>
             <p className="text-sm">
-              Complete your profile first ({(profile.missingFields ?? []).join(", ")}).{" "}
-              <Link href="/creator/profile" className="font-medium underline">
+              Complete your profile first: add your {humanizeMissing(profile.missingFields ?? [])}.{" "}
+              <Link href="/creator/profile" className="link-underline font-medium text-ink">
                 Go to profile
               </Link>
             </p>

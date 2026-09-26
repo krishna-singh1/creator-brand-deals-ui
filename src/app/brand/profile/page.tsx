@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { ImageUpload } from "@/components/image-upload";
-import { CenteredMessage, RequireSession } from "@/components/require-session";
+import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, Input, SectionTitle, Select, SuccessText } from "@/components/ui";
 import { api, type components, unwrap } from "@/lib/api/client";
 import { useCategories, useCities } from "@/lib/catalog";
@@ -29,7 +29,7 @@ export default function BrandProfilePage() {
 
 function Loader() {
   const { data } = useQuery({ queryKey: ["brand", "profile"], queryFn: () => unwrap(api.GET("/brand/profile")) });
-  return data ? <BrandForm key={data.id} brand={data} /> : <CenteredMessage>Loading profile…</CenteredMessage>;
+  return data ? <BrandForm key={data.id} brand={data} /> : <ContentSkeleton />;
 }
 
 function BrandForm({ brand }: { brand: Brand }) {
@@ -77,7 +77,7 @@ function BrandForm({ brand }: { brand: Brand }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Brand profile</h1>
+      <h1 className="font-display text-4xl tracking-tight text-ink">Brand profile</h1>
       <Card>
         <SectionTitle title="About your brand" subtitle="Creators see this on your campaigns. Contact details are only shared once a deal is agreed." />
         <form

@@ -18,3 +18,21 @@ export const DELIVERABLE_LABELS: Record<string, string> = {
   FB_POST: "Facebook Post",
   FB_REEL: "Facebook Reel",
 };
+
+const FIELD_LABELS: Record<string, string> = {
+  displayName: "display name",
+  fullName: "full name",
+  dateOfBirth: "date of birth",
+  city: "city",
+  languages: "languages",
+  categories: "niches",
+  phone: "mobile number",
+  contactEmail: "contact email",
+  socialAccounts: "a social account",
+};
+
+/** Human-readable list of profile fields still missing ("display name, city and a social account"). */
+export function humanizeMissing(fields: string[]) {
+  const labels = fields.map((f) => FIELD_LABELS[f] ?? f);
+  return labels.length <= 1 ? labels.join("") : `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
+}

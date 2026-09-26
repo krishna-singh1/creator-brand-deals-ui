@@ -64,7 +64,7 @@ function AccountRow({ account, onDelete, onSaved }: { account: Account; onDelete
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 p-4">
       <div className="flex flex-col gap-0.5">
-        <a href={account.profileUrl} target="_blank" rel="noreferrer" className="font-medium underline">
+        <a href={account.profileUrl} target="_blank" rel="noreferrer" className="link-underline font-medium text-ink">
           {account.platform === "INSTAGRAM" ? `@${account.handle}` : account.handle}
         </a>
         <span className="text-sm text-zinc-600">

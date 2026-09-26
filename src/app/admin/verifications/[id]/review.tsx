@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { CenteredMessage, RequireSession } from "@/components/require-session";
+import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, Input, SectionTitle, StatusBadge, Textarea } from "@/components/ui";
 import { api, type components, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
@@ -79,7 +79,7 @@ function ReviewBody({ id }: { id: string }) {
     onSuccess: done,
   });
 
-  if (!data) return <CenteredMessage>Loading…</CenteredMessage>;
+  if (!data) return <ContentSkeleton />;
   const { verification, creator, socialAccounts, proofs } = data;
   const pending = verification.status === "PENDING";
   const allPass = CHECKS.every((c) => checklist[c.key]);
@@ -90,7 +90,7 @@ function ReviewBody({ id }: { id: string }) {
         ← Queue
       </Link>
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{creator.displayName}</h1>
+        <h1 className="font-display text-4xl tracking-tight text-ink">{creator.displayName}</h1>
         <StatusBadge status={verification.status} />
       </div>
 
@@ -123,7 +123,7 @@ function ReviewBody({ id }: { id: string }) {
             <div className="flex flex-col gap-4">
               {socialAccounts.map((a) => (
                 <div key={a.id} className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 text-sm">
-                  <a href={a.profileUrl} target="_blank" rel="noreferrer" className="font-medium underline">
+                  <a href={a.profileUrl} target="_blank" rel="noreferrer" className="link-underline font-medium text-ink">
                     {a.platform}: {a.handle}
                   </a>
                   <span className="text-zinc-600">

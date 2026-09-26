@@ -32,6 +32,23 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 | Verify | `npm run lint && npm run typecheck && npm run api:check && npm run build` |
 | E2E (real browser) | API repo: `docker compose up -d` + bootRun with `ADMIN_EMAILS=admin@branddeal.local` and relaxed OTP limits (see README); here: `npm run e2e` (reads OTPs from Mailpit) |
 
+## Design system (look & feel)
+- Palette (Tailwind v4 `@theme` in `src/app/globals.css`): `ink` #121212, `ivory` #faf7f2, `cream`, `sand`, `gold` #b08d57
+  (+ `gold-soft`, `gold-deep`). The `zinc-*` scale is remapped to warm neutrals, so existing `zinc` classes stay on-palette.
+- Type: `font-display` = Playfair Display (headings, numbers, quotes), `font-sans` = Inter (body). Eyebrows are small
+  uppercase gold text with wide tracking (`<Eyebrow>`).
+- Primitives in `src/components/ui.tsx`: `Button` (primary/gold/secondary/ghost/danger, pill, hover lift), `Input`/`Select`/
+  `Textarea` (gold focus ring), `Field`, `Card` (`interactive` lifts), `PageTitle`, `SectionTitle`, `StatusBadge`,
+  `Spinner`, `Skeleton`.
+- Motion in `src/components/motion.tsx` (no animation library): `Reveal` (scroll reveal via IntersectionObserver,
+  `delay` to stagger), `Counter`, `Parallax`, `AnimatedWords`, `useScrolled`. CSS keyframes: `animate-fade-up`,
+  `animate-fade-in`, `animate-page-in`, `animate-float`. Route changes fade in via `src/app/template.tsx`.
+- Rules: animate only `transform`/`opacity`; durations 300–900ms with `--ease-premium`; everything respects
+  `prefers-reduced-motion` (global override in `globals.css`). Keep copy refined and specific; no fake metrics or
+  testimonials (landing stories are labelled "Illustrative").
+- Landing page lives in `src/app/(marketing)/` (route group, URL `/`). Signed-in screens use `AppShell`; auth screens
+  use `AuthLayout`.
+
 ## Structure
 - `src/lib/api/client.ts`: typed client, refresh-on-401, `unwrap()` → `ApiRequestError`
 - `src/lib/session.ts`: `useMe()` (null when signed out), `homeFor(me)` routing rules

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+
+import { Logo } from "@/components/logo";
 import { notFound } from "next/navigation";
 
 const DOCS: Record<string, string> = {
@@ -26,14 +28,18 @@ export default async function LegalPage(props: PageProps<"/legal/[slug]">) {
   if (!title) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-6 py-16">
-      <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-900">
-        ← BrandDeal
-      </Link>
-      <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-      <p className="text-zinc-600">
-        This document is being finalised with our legal advisors and will be published here before launch.
-      </p>
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-24">
+      <Logo />
+      <div className="flex animate-fade-up flex-col gap-5">
+        <span className="text-xs font-medium uppercase tracking-[0.28em] text-gold-deep">Legal</span>
+        <h1 className="font-display text-5xl leading-tight tracking-tight text-ink">{title}</h1>
+        <p className="text-lg leading-relaxed text-zinc-600">
+          This document is being finalised with our legal advisors and will be published here before launch.
+        </p>
+        <Link href="/" className="link-underline w-fit text-sm font-medium text-ink">
+          ← Return home
+        </Link>
+      </div>
     </main>
   );
 }

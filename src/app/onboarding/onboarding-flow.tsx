@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { RequireSession } from "@/components/require-session";
-import { Button, Card, ErrorText } from "@/components/ui";
+import { Button, Card, ErrorText, Spinner } from "@/components/ui";
 import { api, type components, type Me, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
 import { useSetMe } from "@/lib/session";
@@ -49,19 +49,26 @@ function RoleStep() {
   ];
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
-      <Header step={1} title="How will you use BrandDeal?" subtitle="You can't change this later." />
-      <div className="grid gap-4 sm:grid-cols-2">
-        {options.map((o) => (
+    <div className="flex w-full max-w-2xl animate-fade-up flex-col gap-10">
+      <Header step={1} title="How will you use BrandDeal?" subtitle="Choose the side of the table you sit on. This can't be changed later." />
+      <div className="grid gap-5 sm:grid-cols-2">
+        {options.map((o, i) => (
           <button
             key={o.role}
             type="button"
             disabled={selectRole.isPending}
             onClick={() => selectRole.mutate(o.role)}
-            className="flex flex-col gap-2 rounded-2xl border border-zinc-200 bg-white p-6 text-left shadow-sm transition hover:border-zinc-900 disabled:opacity-60"
+            style={{ animationDelay: `${150 + i * 120}ms` }}
+            className="group relative flex animate-fade-up flex-col gap-4 overflow-hidden rounded-3xl border border-zinc-200 bg-white/80 p-8 text-left shadow-soft transition-all duration-500 ease-[var(--ease-premium)] hover:-translate-y-1.5 hover:border-gold/50 hover:shadow-lift disabled:opacity-60"
           >
-            <span className="text-lg font-semibold">{o.title}</span>
-            <span className="text-sm text-zinc-600">{o.body}</span>
+            <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-gradient-to-r from-gold-deep to-gold-soft transition-transform duration-500 group-hover:scale-x-100" />
+            <span className="font-display text-sm italic text-gold">{o.role === "CREATOR" ? "Creator" : "Brand"}</span>
+            <span className="font-display text-2xl tracking-tight text-ink">{o.title}</span>
+            <span className="text-sm leading-relaxed text-zinc-600">{o.body}</span>
+            <span className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-ink">
+              Continue
+              <span aria-hidden className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+            </span>
           </button>
         ))}
       </div>
@@ -82,8 +89,8 @@ function ConsentStep({ me }: { me: Me }) {
   });
 
   return (
-    <Card className="w-full max-w-lg">
-      <div className="flex flex-col gap-6">
+    <Card className="w-full max-w-lg animate-fade-up">
+      <div className="flex flex-col gap-8">
         <Header
           step={2}
           title="A few agreements"
@@ -101,16 +108,19 @@ function ConsentStep({ me }: { me: Me }) {
           }}
         >
           {pending.map((p) => (
-            <label key={p.type} className="flex items-start gap-3 text-sm">
+            <label
+              key={p.type}
+              className="flex cursor-pointer items-start gap-4 rounded-2xl border border-zinc-200 bg-ivory/60 p-4 text-sm leading-relaxed transition-all duration-300 hover:border-gold/50 has-[:checked]:border-gold has-[:checked]:bg-gold/5"
+            >
               <input
                 type="checkbox"
-                className="mt-0.5 size-4"
+                className="mt-0.5 size-4 accent-[#121212]"
                 checked={!!checked[p.type]}
                 onChange={(e) => setChecked((c) => ({ ...c, [p.type]: e.target.checked }))}
               />
               <span>
                 I agree to the{" "}
-                <Link href={CONSENT_LABELS[p.type].href} target="_blank" className="font-medium underline">
+                <Link href={CONSENT_LABELS[p.type].href} target="_blank" className="link-underline font-medium text-ink">
                   {CONSENT_LABELS[p.type].label}
                 </Link>{" "}
                 <span className="text-zinc-400">(v{p.version})</span>
@@ -118,8 +128,14 @@ function ConsentStep({ me }: { me: Me }) {
             </label>
           ))}
           <ErrorText>{accept.isError && errorMessage(accept.error)}</ErrorText>
-          <Button type="submit" disabled={!allChecked || accept.isPending}>
-            {accept.isPending ? "Saving…" : "Accept and continue"}
+          <Button type="submit" className="h-12" disabled={!allChecked || accept.isPending}>
+            {accept.isPending ? (
+              <>
+                <Spinner /> Saving…
+              </>
+            ) : (
+              "Accept and continue"
+            )}
           </Button>
         </form>
       </div>
@@ -129,10 +145,18 @@ function ConsentStep({ me }: { me: Me }) {
 
 function Header({ step, title, subtitle }: { step: number; title: string; subtitle: string }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Step {step} of 2</span>
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      <p className="text-sm text-zinc-600">{subtitle}</p>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-4">
+        <span className="text-xs font-medium uppercase tracking-[0.24em] text-gold-deep">Step {step} of 2</span>
+        <span className="h-px w-24 overflow-hidden bg-zinc-200">
+          <span
+            className="block h-full bg-gold transition-[width] duration-700 ease-[var(--ease-premium)]"
+            style={{ width: `${step * 50}%` }}
+          />
+        </span>
+      </div>
+      <h1 className="font-display text-4xl leading-tight tracking-tight text-ink">{title}</h1>
+      <p className="text-[15px] leading-relaxed text-zinc-600">{subtitle}</p>
     </div>
   );
 }

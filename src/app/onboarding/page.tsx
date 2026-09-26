@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { AuthLayout } from "@/components/auth-layout";
+
 import { OnboardingFlow } from "./onboarding-flow";
 
 export const metadata: Metadata = {
@@ -9,8 +11,8 @@ export const metadata: Metadata = {
 
 export default function OnboardingPage() {
   return (
-    <main className="flex flex-1 items-center justify-center bg-zinc-50 px-4 py-12">
+    <AuthLayout quote={{ text: "Every partnership worth having starts with knowing who you are.", by: "Getting started" }}>
       <OnboardingFlow />
-    </main>
+    </AuthLayout>
   );
 }

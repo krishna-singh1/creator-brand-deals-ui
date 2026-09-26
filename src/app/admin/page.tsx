@@ -38,7 +38,7 @@ function Queue() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Creator verifications</h1>
+        <h1 className="font-display text-4xl tracking-tight text-ink">Creator verifications</h1>
         <Select className="w-44" value={status} onChange={(e) => setStatus(e.target.value as Status)}>
           <option value="PENDING">Pending (oldest first)</option>
           <option value="APPROVED">Approved</option>
@@ -64,7 +64,7 @@ function Queue() {
               {items.map((v) => (
                 <tr key={v.id} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50">
                   <td className="px-4 py-3">
-                    <Link href={`/admin/verifications/${v.id}`} className="font-medium underline">
+                    <Link href={`/admin/verifications/${v.id}`} className="link-underline font-medium text-ink">
                       {v.creator.displayName}
                     </Link>
                     {v.creator.city && <span className="text-zinc-500"> · {v.creator.city}</span>}
