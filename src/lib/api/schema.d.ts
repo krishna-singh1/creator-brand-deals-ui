@@ -2810,6 +2810,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["Unprocessable"];
@@ -2837,6 +2838,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -2859,6 +2861,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     addPortfolioItem: {
@@ -2887,6 +2890,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["Unprocessable"];
         };
     };
@@ -2912,6 +2916,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -2934,6 +2939,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     updateMyRateCard: {
@@ -2962,6 +2968,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["Unprocessable"];
         };
     };
@@ -2984,6 +2991,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -3013,6 +3021,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["Unprocessable"];
         };
@@ -3036,6 +3045,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getCreatorDashboard: {
@@ -3057,6 +3067,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listMyApplications: {
@@ -3083,6 +3094,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getMyBrandProfile: {
@@ -3133,6 +3145,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["Unprocessable"];
         };
     };
@@ -3155,6 +3168,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     searchCreators: {
@@ -3188,6 +3202,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             501: components["responses"]["NotImplemented"];
         };
     };
@@ -3212,6 +3227,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
