@@ -102,6 +102,65 @@ paths:
         '422': { $ref: '#/components/responses/Unprocessable' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: loginWithPassword
+      summary: Sign in with email and password (accounts that have set a password)
+      description: >
+        Wrong email, wrong password and "no password set" all return the same `401 INVALID_CREDENTIALS`, so the
+        endpoint doesn't reveal which emails have accounts. Failed attempts are throttled per email and per IP
+        (`429 RATE_LIMITED` with `details.retryAfterSeconds`).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordLoginRequest' }
+      responses:
+        '200':
+          description: Logged in. Sets `bd_at` and `bd_rt` cookies.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetAuthCookies' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/password/reset:
+    post:
+      tags: [auth]
+      operationId: resetPassword
+      summary: Set a new password using an emailed code (request it with /auth/otp/request)
+      description: >
+        Proves email ownership with the one-time code, sets the password, signs out every other session and signs
+        this browser in. Also works for accounts that never had a password.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResetPasswordRequest' }
+      responses:
+        '200':
+          description: Password set and logged in. Sets `bd_at` and `bd_rt` cookies.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetAuthCookies' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /auth/google:
     post:
       tags: [auth]
@@ -170,6 +229,34 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
 
   # ───────────────────────────── user ─────────────────────────────
+  /me/password:
+    put:
+      tags: [user]
+      operationId: setMyPassword
+      summary: Create a password (first time) or change it (current password required)
+      description: >
+        If the account already has a password, `currentPassword` must match (`422` with
+        `details.fields.currentPassword` otherwise). Other sessions are signed out; this browser gets fresh cookies.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetPasswordRequest' }
+      responses:
+        '200':
+          description: Password saved. Sets fresh `bd_at` and `bd_rt` cookies.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetAuthCookies' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /me/role:
     post:
       tags: [user]
@@ -1950,6 +2037,7 @@ components:
         - RATE_LIMITED
         - INTERNAL_ERROR
         - NOT_IMPLEMENTED
+        - INVALID_CREDENTIALS
         - OTP_INVALID
         - OTP_EXPIRED
         - OTP_TOO_MANY_ATTEMPTS
@@ -2156,6 +2244,30 @@ components:
       properties:
         email: { type: string, format: email, maxLength: 254 }
         otp: { type: string, pattern: '^[0-9]{6}$' }
+    Password:
+      type: string
+      minLength: 8
+      maxLength: 128
+      description: 8–128 characters. Common passwords and the account email are rejected.
+    PasswordLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 1, maxLength: 128 }
+    ResetPasswordRequest:
+      type: object
+      required: [email, otp, newPassword]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        otp: { type: string, pattern: '^[0-9]{6}$' }
+        newPassword: { $ref: '#/components/schemas/Password' }
+    SetPasswordRequest:
+      type: object
+      required: [newPassword]
+      properties:
+        currentPassword: { type: string, maxLength: 128, description: Required when the account already has a password }
+        newPassword: { $ref: '#/components/schemas/Password' }
     GoogleLoginRequest:
       type: object
       required: [idToken]
@@ -2163,18 +2275,22 @@ components:
         idToken: { type: string, minLength: 10, maxLength: 4096 }
     Me:
       type: object
-      required: [id, email, status, onboarding]
+      required: [id, email, status, hasPassword, onboarding]
       properties:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
+        hasPassword: { type: boolean, description: Whether email + password sign-in is set up }
         role: { $ref: '#/components/schemas/Role' }
         status: { $ref: '#/components/schemas/UserStatus' }
         displayName: { type: string }
         avatarUrl: { type: string, format: uri }
         onboarding:
           type: object
-          required: [roleSelected, consentsAccepted, profileComplete]
+          required: [passwordRequired, roleSelected, consentsAccepted, profileComplete]
           properties:
+            passwordRequired:
+              type: boolean
+              description: True when the user has neither a password nor Google sign-in; the web app asks them to create one
             roleSelected: { type: boolean }
             consentsAccepted: { type: boolean }
             profileComplete: { type: boolean }

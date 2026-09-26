@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 
+import { PasswordField } from "@/components/password-input";
 import { RequireSession } from "@/components/require-session";
 import { Button, Card, ErrorText, Spinner } from "@/components/ui";
 import { api, type components, type Me, unwrap } from "@/lib/api/client";
@@ -21,14 +22,87 @@ const CONSENT_LABELS: Record<ConsentType, { label: string; href: string }> = {
 };
 
 export function OnboardingFlow() {
+  return <RequireSession allowOnboarding>{(me) => <Steps me={me} />}</RequireSession>;
+}
+
+/** Steps: create password (only when needed) → role → agreements. The step count is fixed on first render. */
+function Steps({ me }: { me: Me }) {
+  const [initial] = useState(() => ({
+    password: me.onboarding.passwordRequired,
+    role: !me.onboarding.roleSelected,
+  }));
+  const roleStep = (initial.password ? 1 : 0) + 1;
+  const total = roleStep + (initial.role ? 1 : 0);
+  if (me.onboarding.passwordRequired) return <PasswordStep total={total} />;
+  if (!me.onboarding.roleSelected) return <RoleStep step={roleStep} total={total} />;
+  return <ConsentStep me={me} step={total} total={total} />;
+}
+
+function PasswordStep({ total }: { total: number }) {
+  const setMe = useSetMe();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const mismatch = confirm.length > 0 && confirm !== password;
+  const save = useMutation({
+    mutationFn: () => unwrap(api.PUT("/me/password", { body: { newPassword: password } })),
+    onSuccess: setMe,
+  });
+
   return (
-    <RequireSession allowOnboarding>
-      {(me) => (me.onboarding.roleSelected ? <ConsentStep me={me} /> : <RoleStep />)}
-    </RequireSession>
+    <Card className="w-full max-w-lg animate-fade-up">
+      <div className="flex flex-col gap-8">
+        <Header
+          step={1}
+          total={total}
+          title="Create your password"
+          subtitle="Your email is verified. From now on, sign in with your email and this password; no code needed."
+        />
+        <form
+          className="flex flex-col gap-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save.mutate();
+          }}
+        >
+          <PasswordField
+            label="Password"
+            showStrength
+            required
+            minLength={8}
+            maxLength={128}
+            autoComplete="new-password"
+            autoFocus
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <PasswordField
+            label="Confirm password"
+            required
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+          <p className="text-xs leading-relaxed text-zinc-500">
+            At least 8 characters. A short phrase like <span className="italic">monsoon chai at six</span> is strong and
+            easy to remember.
+          </p>
+          <ErrorText>{(mismatch && "Passwords don't match.") || (save.isError && errorMessage(save.error))}</ErrorText>
+          <Button type="submit" className="h-12" disabled={[...password].length < 8 || confirm !== password || save.isPending}>
+            {save.isPending ? (
+              <>
+                <Spinner /> Saving…
+              </>
+            ) : (
+              "Save password and continue"
+            )}
+          </Button>
+        </form>
+      </div>
+    </Card>
   );
 }
 
-function RoleStep() {
+function RoleStep({ step, total }: { step: number; total: number }) {
   const setMe = useSetMe();
   const selectRole = useMutation({
     mutationFn: (role: "CREATOR" | "BRAND") => unwrap(api.POST("/me/role", { body: { role } })),
@@ -50,7 +124,7 @@ function RoleStep() {
 
   return (
     <div className="flex w-full max-w-2xl animate-fade-up flex-col gap-10">
-      <Header step={1} title="How will you use BrandDeal?" subtitle="Choose the side of the table you sit on. This can't be changed later." />
+      <Header step={step} total={total} title="How will you use BrandDeal?" subtitle="Choose the side of the table you sit on. This can't be changed later." />
       <div className="grid gap-5 sm:grid-cols-2">
         {options.map((o, i) => (
           <button
@@ -77,7 +151,7 @@ function RoleStep() {
   );
 }
 
-function ConsentStep({ me }: { me: Me }) {
+function ConsentStep({ me, step, total }: { me: Me; step: number; total: number }) {
   const setMe = useSetMe();
   const pending = me.onboarding.pendingConsents ?? [];
   const [checked, setChecked] = useState<Partial<Record<ConsentType, boolean>>>({});
@@ -92,7 +166,8 @@ function ConsentStep({ me }: { me: Me }) {
     <Card className="w-full max-w-lg animate-fade-up">
       <div className="flex flex-col gap-8">
         <Header
-          step={2}
+          step={step}
+          total={total}
           title="A few agreements"
           subtitle={
             me.role === "CREATOR"
@@ -143,15 +218,15 @@ function ConsentStep({ me }: { me: Me }) {
   );
 }
 
-function Header({ step, title, subtitle }: { step: number; title: string; subtitle: string }) {
+function Header({ step, total, title, subtitle }: { step: number; total: number; title: string; subtitle: string }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <span className="text-xs font-medium uppercase tracking-[0.24em] text-gold-deep">Step {step} of 2</span>
+        <span className="text-xs font-medium uppercase tracking-[0.24em] text-gold-deep">Step {step} of {total}</span>
         <span className="h-px w-24 overflow-hidden bg-zinc-200">
           <span
             className="block h-full bg-gold transition-[width] duration-700 ease-[var(--ease-premium)]"
-            style={{ width: `${step * 50}%` }}
+            style={{ width: `${(step / total) * 100}%` }}
           />
         </span>
       </div>

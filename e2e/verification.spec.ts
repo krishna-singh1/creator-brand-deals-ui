@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { acceptConsents, PNG, signIn, signUp } from "./helpers";
+import { finishOnboarding, PNG, signIn, signUp } from "./helpers";
 
 /** Admin email configured on the local API via ADMIN_EMAILS (see README). */
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@branddeal.local";
@@ -51,8 +51,7 @@ test("creator completes profile, submits proofs, admin approves, creator is veri
   // ── Admin ──
   const admin = await (await browser.newContext()).newPage();
   await signIn(admin, ADMIN_EMAIL);
-  await admin.waitForURL(/\/(onboarding|admin)$/);
-  if (admin.url().endsWith("/onboarding")) await acceptConsents(admin);
+  await finishOnboarding(admin);
   await expect(admin).toHaveURL(/\/admin$/);
   let row = admin.getByRole("link", { name: "Riya Eats" }).last();
   for (let i = 0; i < 10 && !(await row.isVisible()); i++) {

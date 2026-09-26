@@ -38,6 +38,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with email and password (accounts that have set a password)
+         * @description Wrong email, wrong password and "no password set" all return the same `401 INVALID_CREDENTIALS`, so the endpoint doesn't reveal which emails have accounts. Failed attempts are throttled per email and per IP (`429 RATE_LIMITED` with `details.retryAfterSeconds`).
+         */
+        post: operations["loginWithPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a new password using an emailed code (request it with /auth/otp/request)
+         * @description Proves email ownership with the one-time code, sets the password, signs out every other session and signs this browser in. Also works for accounts that never had a password.
+         */
+        post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/google": {
         parameters: {
             query?: never;
@@ -99,6 +139,26 @@ export interface paths {
         /** Current user and onboarding state */
         get: operations["getMe"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Create a password (first time) or change it (current password required)
+         * @description If the account already has a password, `currentPassword` must match (`422` with `details.fields.currentPassword` otherwise). Other sessions are signed out; this browser gets fresh cookies.
+         */
+        put: operations["setMyPassword"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1279,7 +1339,7 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {string} */
-        ErrorCode: "MALFORMED_REQUEST" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INVALID_STATE_TRANSITION" | "RATE_LIMITED" | "INTERNAL_ERROR" | "NOT_IMPLEMENTED" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_TOO_MANY_ATTEMPTS" | "GOOGLE_TOKEN_INVALID" | "REFRESH_TOKEN_INVALID" | "ACCOUNT_SUSPENDED" | "ROLE_NOT_SELECTED" | "ROLE_ALREADY_SET" | "CONSENT_REQUIRED" | "PROFILE_INCOMPLETE" | "CREATOR_NOT_VERIFIED" | "CREATOR_UNDERAGE" | "VERIFICATION_ALREADY_PENDING" | "CATEGORY_LIMIT_EXCEEDED" | "CREATOR_NOT_ELIGIBLE" | "APPLICATION_ALREADY_EXISTS" | "CAMPAIGN_NOT_OPEN" | "CAMPAIGN_FILLED" | "DISCLOSURE_REQUIRED" | "REVIEW_ALREADY_EXISTS" | "FILE_TYPE_NOT_ALLOWED" | "FILE_TOO_LARGE" | "FILE_NOT_UPLOADED";
+        ErrorCode: "MALFORMED_REQUEST" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INVALID_STATE_TRANSITION" | "RATE_LIMITED" | "INTERNAL_ERROR" | "NOT_IMPLEMENTED" | "INVALID_CREDENTIALS" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_TOO_MANY_ATTEMPTS" | "GOOGLE_TOKEN_INVALID" | "REFRESH_TOKEN_INVALID" | "ACCOUNT_SUSPENDED" | "ROLE_NOT_SELECTED" | "ROLE_ALREADY_SET" | "CONSENT_REQUIRED" | "PROFILE_INCOMPLETE" | "CREATOR_NOT_VERIFIED" | "CREATOR_UNDERAGE" | "VERIFICATION_ALREADY_PENDING" | "CATEGORY_LIMIT_EXCEEDED" | "CREATOR_NOT_ELIGIBLE" | "APPLICATION_ALREADY_EXISTS" | "CAMPAIGN_NOT_OPEN" | "CAMPAIGN_FILLED" | "DISCLOSURE_REQUIRED" | "REVIEW_ALREADY_EXISTS" | "FILE_TYPE_NOT_ALLOWED" | "FILE_TOO_LARGE" | "FILE_NOT_UPLOADED";
         ErrorResponse: {
             error: {
                 code: components["schemas"]["ErrorCode"];
@@ -1392,6 +1452,24 @@ export interface components {
             email: string;
             otp: string;
         };
+        /** @description 8–128 characters. Common passwords and the account email are rejected. */
+        Password: string;
+        PasswordLoginRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+        };
+        ResetPasswordRequest: {
+            /** Format: email */
+            email: string;
+            otp: string;
+            newPassword: components["schemas"]["Password"];
+        };
+        SetPasswordRequest: {
+            /** @description Required when the account already has a password */
+            currentPassword?: string;
+            newPassword: components["schemas"]["Password"];
+        };
         GoogleLoginRequest: {
             idToken: string;
         };
@@ -1400,12 +1478,16 @@ export interface components {
             id: string;
             /** Format: email */
             email: string;
+            /** @description Whether email + password sign-in is set up */
+            hasPassword: boolean;
             role?: components["schemas"]["Role"];
             status: components["schemas"]["UserStatus"];
             displayName?: string;
             /** Format: uri */
             avatarUrl?: string;
             onboarding: {
+                /** @description True when the user has neither a password nor Google sign-in; the web app asks them to create one */
+                passwordRequired: boolean;
                 roleSelected: boolean;
                 consentsAccepted: boolean;
                 profileComplete: boolean;
@@ -2357,6 +2439,70 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    loginWithPassword: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Logged in. Sets `bd_at` and `bd_rt` cookies. */
+            200: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SetAuthCookies"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Password set and logged in. Sets `bd_at` and `bd_rt` cookies. */
+            200: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SetAuthCookies"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     loginWithGoogle: {
         parameters: {
             query?: never;
@@ -2451,6 +2597,38 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+        };
+    };
+    setMyPassword: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Password saved. Sets fresh `bd_at` and `bd_rt` cookies. */
+            200: {
+                headers: {
+                    "Set-Cookie": components["headers"]["SetAuthCookies"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     selectRole: {

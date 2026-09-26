@@ -34,7 +34,7 @@ For e2e, start the API with a bootstrap admin and relaxed OTP limits (all test l
 ```bash
 # in the API repo
 SPRING_PROFILES_ACTIVE=local ADMIN_EMAILS=admin@branddeal.local \
-APP_OTP_RESEND_AFTER=1s APP_OTP_MAX_PER_EMAIL_WINDOW=1000 APP_OTP_MAX_PER_IP_HOUR=100000 ./gradlew bootRun
+APP_OTP_RESEND_AFTER=1s APP_OTP_MAX_PER_EMAIL_WINDOW=1000 APP_OTP_MAX_PER_IP_HOUR=100000 APP_LOGIN_MAX_FAILURES_PER_IP_HOUR=100000 ./gradlew bootRun
 ```
 
 ## Deploy (Vercel)

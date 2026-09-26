@@ -28,7 +28,7 @@ export function useSetMe() {
 }
 
 export function needsOnboarding(me: Me) {
-  return !me.onboarding.roleSelected || !me.onboarding.consentsAccepted;
+  return me.onboarding.passwordRequired || !me.onboarding.roleSelected || !me.onboarding.consentsAccepted;
 }
 
 /** Where a signed-in user belongs right now. */

@@ -16,12 +16,17 @@ const NAV: Record<string, { href: string; label: string }[]> = {
     { href: "/creator", label: "Home" },
     { href: "/creator/profile", label: "Profile" },
     { href: "/creator/verification", label: "Verification" },
+    { href: "/account", label: "Account" },
   ],
   BRAND: [
     { href: "/brand", label: "Home" },
     { href: "/brand/profile", label: "Profile" },
+    { href: "/account", label: "Account" },
   ],
-  ADMIN: [{ href: "/admin", label: "Verifications" }],
+  ADMIN: [
+    { href: "/admin", label: "Verifications" },
+    { href: "/account", label: "Account" },
+  ],
 };
 
 const ROLE_LABEL: Record<string, string> = { CREATOR: "Creator", BRAND: "Brand", ADMIN: "Admin" };

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { latestOtp, signIn } from "./helpers";
+import { createPassword, latestOtp, signIn } from "./helpers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
 test("creator signs up with email OTP, onboards, and lands on the creator home", async ({ page }) => {
@@ -9,6 +9,8 @@ test("creator signs up with email OTP, onboards, and lands on the creator home",
   await signIn(page, email);
 
   await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByText("Step 1 of 3")).toBeVisible();
+  await createPassword(page);
   await page.getByRole("button", { name: /I'm a creator/ }).click();
 
   await expect(page.getByRole("heading", { name: "A few agreements" })).toBeVisible();
@@ -38,6 +40,8 @@ test("creator signs up with email OTP, onboards, and lands on the creator home",
 test("wrong code shows remaining attempts", async ({ page }) => {
   const email = `e2e-wrong-${Date.now()}@example.com`;
   await page.goto("/login");
+  await page.getByRole("button", { name: "Create an account" }).click();
+  await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Continue with email" }).click();
   const real = await latestOtp(email);
@@ -49,6 +53,7 @@ test("wrong code shows remaining attempts", async ({ page }) => {
 test("expired access token is refreshed transparently", async ({ page, context }) => {
   const email = `e2e-refresh-${Date.now()}@example.com`;
   await signIn(page, email);
+  await createPassword(page);
   await page.getByRole("button", { name: /I'm a brand/ }).click();
   await expect(page.getByRole("heading", { name: "A few agreements" })).toBeVisible();
   for (const box of await page.getByRole("checkbox").all()) await box.check();

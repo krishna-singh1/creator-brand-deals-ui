@@ -30,14 +30,33 @@ export async function latestOtp(email: string, since = new Date(0)): Promise<str
   throw new Error(`No OTP email for ${email}`);
 }
 
+export const TEST_PASSWORD = "monsoon chai at six";
+
+/** Signs in with an emailed code (new accounts, or "Email me a code instead"). */
 export async function signIn(page: Page, email: string) {
   await page.goto("/login");
+  await page.getByRole("button", { name: "Email me a code instead" }).click();
   await page.getByLabel("Email").fill(email);
   const requestedAt = new Date();
   await page.getByRole("button", { name: "Continue with email" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
   await page.getByLabel("Login code").fill(await latestOtp(email, requestedAt));
   await page.getByRole("button", { name: "Verify and continue" }).click();
+}
+
+export async function signInWithPassword(page: Page, email: string, password = TEST_PASSWORD) {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+}
+
+/** Onboarding step 1 for code-only accounts. */
+export async function createPassword(page: Page, password = TEST_PASSWORD) {
+  await expect(page.getByRole("heading", { name: "Create your password" })).toBeVisible();
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Confirm password").fill(password);
+  await page.getByRole("button", { name: "Save password and continue" }).click();
 }
 
 /** Accepts every pending policy on the onboarding consent step. */
@@ -47,10 +66,26 @@ export async function acceptConsents(page: Page) {
   await page.getByRole("button", { name: "Accept and continue" }).click();
 }
 
+/** New account: code sign-in → create password → role → agreements → role home. */
 export async function signUp(page: Page, email: string, role: "creator" | "brand") {
   await signIn(page, email);
   await expect(page).toHaveURL(/\/onboarding$/);
+  await createPassword(page);
   await page.getByRole("button", { name: role === "creator" ? /I'm a creator/ : /I'm a brand/ }).click();
   await acceptConsents(page);
   await expect(page).toHaveURL(role === "creator" ? /\/creator$/ : /\/brand$/);
+}
+
+/** Completes whatever onboarding steps an existing account still has (password and/or agreements). */
+export async function finishOnboarding(page: Page) {
+  const consents = page.getByRole("heading", { name: "A few agreements" });
+  const password = page.getByRole("heading", { name: "Create your password" });
+  const settled = async () => !page.url().endsWith("/onboarding") || (await consents.isVisible());
+
+  await page.waitForURL(/\/(onboarding|admin|creator|brand)$/);
+  if (!page.url().endsWith("/onboarding")) return;
+  await expect(password.or(consents)).toBeVisible();
+  if (await password.isVisible()) await createPassword(page);
+  await expect(async () => expect(await settled()).toBe(true)).toPass();
+  if (await consents.isVisible()) await acceptConsents(page);
 }
