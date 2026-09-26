@@ -66,11 +66,18 @@ export async function acceptConsents(page: Page) {
   await page.getByRole("button", { name: "Accept and continue" }).click();
 }
 
-/** New account: code sign-in → create password → role → agreements → role home. */
-export async function signUp(page: Page, email: string, role: "creator" | "brand") {
-  await signIn(page, email);
+/** New account: email + password → verify email with the code → role → agreements → role home. */
+export async function signUp(page: Page, email: string, role: "creator" | "brand", password = TEST_PASSWORD) {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  const requestedAt = new Date();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Verify your email" })).toBeVisible();
+  await page.getByLabel("Verification code").fill(await latestOtp(email, requestedAt));
+  await page.getByRole("button", { name: "Verify and sign in" }).click();
   await expect(page).toHaveURL(/\/onboarding$/);
-  await createPassword(page);
+  await expect(page.getByText("Step 1 of 2")).toBeVisible();
   await page.getByRole("button", { name: role === "creator" ? /I'm a creator/ : /I'm a brand/ }).click();
   await acceptConsents(page);
   await expect(page).toHaveURL(role === "creator" ? /\/creator$/ : /\/brand$/);

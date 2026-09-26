@@ -40,8 +40,8 @@ test("creator signs up with email OTP, onboards, and lands on the creator home",
 test("wrong code shows remaining attempts", async ({ page }) => {
   const email = `e2e-wrong-${Date.now()}@example.com`;
   await page.goto("/login");
-  await page.getByRole("button", { name: "Create an account" }).click();
-  await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
+  await page.getByRole("button", { name: "Email me a code instead" }).click();
+  await expect(page.getByRole("heading", { name: "Sign in with a code" })).toBeVisible();
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Continue with email" }).click();
   const real = await latestOtp(email);

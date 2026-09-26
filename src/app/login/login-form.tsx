@@ -14,13 +14,14 @@ import { homeFor, needsOnboarding, useMe, useSetMe } from "@/lib/session";
 import { GoogleButton } from "./google-button";
 
 /**
- * password     email + password (default for returning users)
- * code-email   request an email code (new accounts, or "email me a code instead")
- * code         enter the emailed code
+ * password     email + password. Verified account → signed in; new/unverified email → a code is sent ("verify")
+ * verify       enter the code; the password typed on the first step is saved and the user is signed in
+ * code-email   "email me a code instead": request a sign-in code
+ * code         enter the sign-in code
  * reset-email  forgot password: request a code
  * reset        enter the code + a new password
  */
-type Mode = "password" | "code-email" | "code" | "reset-email" | "reset";
+type Mode = "password" | "verify" | "code-email" | "code" | "reset-email" | "reset";
 
 const labelClass = "flex flex-col gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-zinc-600";
 
@@ -32,7 +33,6 @@ export function LoginForm() {
   const setMe = useSetMe();
 
   const [mode, setMode] = useState<Mode>(params.get("mode") === "reset" ? "reset-email" : "password");
-  const [signingUp, setSigningUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -58,10 +58,19 @@ export function LoginForm() {
 
   const login = useMutation({
     mutationFn: () => unwrap(api.POST("/auth/login", { body: { email, password } })),
-    onSuccess: signedIn,
+    onSuccess: (res) => {
+      if ("next" in res) {
+        // Email not verified yet: a code was sent; finishing saves this password.
+        setOtp("");
+        setResendIn(res.resendAfterSeconds);
+        setMode("verify");
+      } else {
+        signedIn(res);
+      }
+    },
   });
   // The mutation variable is the mode to show once the code is sent ("code" or "reset").
-  const requestOtp = useMutation<Awaited<ReturnType<typeof requestCode>>, Error, "code" | "reset">({
+  const requestOtp = useMutation<Awaited<ReturnType<typeof requestCode>>, Error, "code" | "reset" | "verify">({
     mutationFn: () => requestCode(email),
     onSuccess: (res, target) => {
       setMode(target);
@@ -74,25 +83,37 @@ export function LoginForm() {
     onSuccess: signedIn,
   });
   const reset = useMutation({
-    mutationFn: () => unwrap(api.POST("/auth/password/reset", { body: { email, otp, newPassword } })),
+    mutationFn: () =>
+      unwrap(
+        api.POST("/auth/password/reset", {
+          body: { email, otp, newPassword: mode === "verify" ? password : newPassword },
+        }),
+      ),
     onSuccess: signedIn,
   });
 
-  const go = (target: Mode, signup = false) => {
-    setSigningUp(signup);
+  const go = (target: Mode) => {
     [login, requestOtp, verifyOtp, reset].forEach((m) => m.reset());
     setMode(target);
   };
 
   const heading: Record<Mode, { eyebrow: string; title: string; body: ReactNode }> = {
     password: {
-      eyebrow: "Welcome back",
+      eyebrow: "Welcome",
       title: "Sign in to BrandDeal",
-      body: "Creators and brands share one refined sign-in.",
+      body: "New here? Enter your email and choose a password. We'll verify your email with a quick code, just once.",
     },
-    "code-email": signingUp
-      ? { eyebrow: "Join BrandDeal", title: "Create your account", body: "Start with your email. We'll send a code to verify it, then you'll set a password." }
-      : { eyebrow: "Welcome back", title: "Sign in with a code", body: "We'll email you a one-time code. No password needed." },
+    verify: {
+      eyebrow: "One-time check",
+      title: "Verify your email",
+      body: (
+        <>
+          We sent a 6-digit code to <span className="font-medium text-ink">{email}</span>. Enter it to confirm the
+          address and finish signing in. Next time, your password is all you need.
+        </>
+      ),
+    },
+    "code-email": { eyebrow: "Welcome back", title: "Sign in with a code", body: "We'll email you a one-time code. No password needed." },
     code: {
       eyebrow: "One more step",
       title: "Check your email",
@@ -181,12 +202,6 @@ export function LoginForm() {
               </Button>
               <GoogleButton onSuccess={signedIn} />
             </div>
-            <p className="text-center text-sm text-zinc-600">
-              New to BrandDeal?{" "}
-              <button type="button" onClick={() => go("code-email", true)} className="link-underline font-medium text-ink">
-                Create an account
-              </button>
-            </p>
           </>
         )}
 
@@ -218,6 +233,34 @@ export function LoginForm() {
           </form>
         )}
 
+        {mode === "verify" && (
+          <form
+            className="flex flex-col gap-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              reset.mutate();
+            }}
+          >
+            <CodeField label="Verification code" otp={otp} setOtp={setOtp} />
+            <ErrorText>{(reset.isError && errorMessage(reset.error)) || (requestOtp.isError && errorMessage(requestOtp.error))}</ErrorText>
+            <Button type="submit" className="h-12" disabled={otp.length !== 6 || reset.isPending}>
+              {reset.isPending ? (
+                <>
+                  <Spinner /> Verifying…
+                </>
+              ) : (
+                "Verify and sign in"
+              )}
+            </Button>
+            <CodeFooter
+              resendIn={resendIn}
+              resending={requestOtp.isPending}
+              onChangeEmail={() => go("password")}
+              onResend={() => requestOtp.mutate("verify")}
+            />
+          </form>
+        )}
+
         {mode === "code" && (
           <form
             className="flex flex-col gap-5"
@@ -242,7 +285,7 @@ export function LoginForm() {
             <CodeFooter
               resendIn={resendIn}
               resending={requestOtp.isPending}
-              onChangeEmail={() => go("code-email", signingUp)}
+              onChangeEmail={() => go("code-email")}
               onResend={() => requestOtp.mutate("code")}
             />
           </form>

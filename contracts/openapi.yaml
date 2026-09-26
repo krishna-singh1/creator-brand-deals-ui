@@ -106,11 +106,14 @@ paths:
     post:
       tags: [auth]
       operationId: loginWithPassword
-      summary: Sign in with email and password (accounts that have set a password)
+      summary: Sign in (or sign up) with email and password
       description: >
-        Wrong email, wrong password and "no password set" all return the same `401 INVALID_CREDENTIALS`, so the
-        endpoint doesn't reveal which emails have accounts. Failed attempts are throttled per email and per IP
-        (`429 RATE_LIMITED` with `details.retryAfterSeconds`).
+        If the email belongs to an account **with a password**, the password is checked: `200` signs in, a mismatch is
+        `401 INVALID_CREDENTIALS`. If the email is **new or has no password yet** (not verified for password sign-in),
+        the password is checked against the policy and a 6-digit code is emailed: `202 VERIFY_EMAIL`. The client then
+        calls `POST /auth/password/reset` with the code and the same password, which verifies the email, saves the
+        password and signs in. Failed password checks are throttled per email and per IP (`429 RATE_LIMITED`); the
+        code path follows the OTP rate limits.
       security: []
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
@@ -127,6 +130,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Me' }
+        '202':
+          description: Email not verified yet; a code was sent. Finish with `POST /auth/password/reset`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailVerificationRequired' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/Unprocessable' }
@@ -136,10 +144,11 @@ paths:
     post:
       tags: [auth]
       operationId: resetPassword
-      summary: Set a new password using an emailed code (request it with /auth/otp/request)
+      summary: Verify an emailed code and set the password (first sign-in, or forgot password)
       description: >
-        Proves email ownership with the one-time code, sets the password, signs out every other session and signs
-        this browser in. Also works for accounts that never had a password.
+        Proves email ownership with the one-time code (sent by `/auth/login` for unverified emails, or by
+        `/auth/otp/request` for "forgot password"), creates the account if new, sets the password, signs out every
+        other session and signs this browser in.
       security: []
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
@@ -2249,6 +2258,13 @@ components:
       minLength: 8
       maxLength: 128
       description: 8–128 characters. Common passwords and the account email are rejected.
+    EmailVerificationRequired:
+      type: object
+      required: [next, expiresInSeconds, resendAfterSeconds]
+      properties:
+        next: { type: string, enum: [VERIFY_EMAIL] }
+        expiresInSeconds: { type: integer }
+        resendAfterSeconds: { type: integer }
     PasswordLoginRequest:
       type: object
       required: [email, password]

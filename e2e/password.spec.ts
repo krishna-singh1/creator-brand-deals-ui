@@ -15,6 +15,15 @@ test("returning user signs in with email and password, no code", async ({ page }
   await expect(page).toHaveURL(/\/creator$/);
 });
 
+test("new email with a weak password is stopped before any code is sent", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(`e2e-weak-${Date.now()}@example.com`);
+  await page.getByLabel("Password", { exact: true }).fill("password123");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByText("too easy to guess")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to BrandDeal" })).toBeVisible();
+});
+
 test("forgot password: reset with an emailed code, then sign in with the new password", async ({ page }) => {
   const email = `e2e-reset-${Date.now()}@example.com`;
   await signUp(page, email, "brand");

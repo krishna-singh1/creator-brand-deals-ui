@@ -48,8 +48,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Sign in with email and password (accounts that have set a password)
-         * @description Wrong email, wrong password and "no password set" all return the same `401 INVALID_CREDENTIALS`, so the endpoint doesn't reveal which emails have accounts. Failed attempts are throttled per email and per IP (`429 RATE_LIMITED` with `details.retryAfterSeconds`).
+         * Sign in (or sign up) with email and password
+         * @description If the email belongs to an account **with a password**, the password is checked: `200` signs in, a mismatch is `401 INVALID_CREDENTIALS`. If the email is **new or has no password yet** (not verified for password sign-in), the password is checked against the policy and a 6-digit code is emailed: `202 VERIFY_EMAIL`. The client then calls `POST /auth/password/reset` with the code and the same password, which verifies the email, saves the password and signs in. Failed password checks are throttled per email and per IP (`429 RATE_LIMITED`); the code path follows the OTP rate limits.
          */
         post: operations["loginWithPassword"];
         delete?: never;
@@ -68,8 +68,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Set a new password using an emailed code (request it with /auth/otp/request)
-         * @description Proves email ownership with the one-time code, sets the password, signs out every other session and signs this browser in. Also works for accounts that never had a password.
+         * Verify an emailed code and set the password (first sign-in, or forgot password)
+         * @description Proves email ownership with the one-time code (sent by `/auth/login` for unverified emails, or by `/auth/otp/request` for "forgot password"), creates the account if new, sets the password, signs out every other session and signs this browser in.
          */
         post: operations["resetPassword"];
         delete?: never;
@@ -1454,6 +1454,12 @@ export interface components {
         };
         /** @description 8–128 characters. Common passwords and the account email are rejected. */
         Password: string;
+        EmailVerificationRequired: {
+            /** @enum {string} */
+            next: "VERIFY_EMAIL";
+            expiresInSeconds: number;
+            resendAfterSeconds: number;
+        };
         PasswordLoginRequest: {
             /** Format: email */
             email: string;
@@ -2463,6 +2469,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Email not verified yet; a code was sent. Finish with `POST /auth/password/reset`. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailVerificationRequired"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
