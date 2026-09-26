@@ -30,6 +30,14 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 | Dev server | `npm run dev` (http://localhost:3000, API at http://localhost:8080) |
 | Sync contract + types | `npm run contract:sync && npm run api:types` |
 | Verify | `npm run lint && npm run typecheck && npm run api:check && npm run build` |
+| E2E (real browser) | API repo: `docker compose up -d` + `./gradlew bootRun`; here: `npm run e2e` (reads OTPs from Mailpit) |
+
+## Structure
+- `src/lib/api/client.ts`: typed client, refresh-on-401, `unwrap()` → `ApiRequestError`
+- `src/lib/session.ts`: `useMe()` (null when signed out), `homeFor(me)` routing rules
+- `src/components/require-session.tsx`: client route guard (UX only; the API enforces access)
+- `src/app/login`, `src/app/onboarding`, `src/app/creator`, `src/app/brand`: screens per role
+- `e2e/`: Playwright specs against the running web + API
 
 ## Git
 - Commit author `krishna-singh1` (repo-local config). Short action-only messages. No co-author trailers.

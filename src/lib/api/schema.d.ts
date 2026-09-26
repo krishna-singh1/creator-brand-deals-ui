@@ -1410,8 +1410,13 @@ export interface components {
                 consentsAccepted: boolean;
                 profileComplete: boolean;
                 creatorStatus?: components["schemas"]["CreatorStatus"];
-                pendingConsents?: components["schemas"]["ConsentType"][];
+                /** @description Policies (at their current version) the user still has to accept */
+                pendingConsents?: components["schemas"]["PolicyVersion"][];
             };
+        };
+        PolicyVersion: {
+            type: components["schemas"]["ConsentType"];
+            version: string;
         };
         SelectRoleRequest: {
             role: components["schemas"]["SelectableRole"];

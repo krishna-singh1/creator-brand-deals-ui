@@ -26,6 +26,7 @@ npm run api:types       # regenerate src/lib/api/schema.d.ts
 
 ```bash
 npm run lint && npm run typecheck && npm run api:check && npm run build
+npm run e2e   # real-browser tests; needs the API (+ docker compose Postgres/Mailpit) running
 ```
 
 ## Deploy (Vercel)

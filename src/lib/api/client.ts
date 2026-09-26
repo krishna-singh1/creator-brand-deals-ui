@@ -2,6 +2,8 @@ import createClient from "openapi-fetch";
 
 import type { components, paths } from "./schema";
 
+export type { components };
+
 /**
  * Typed client for the BrandDeal API (contract synced from the API repo, ADR 0009).
  * The API is a separate deployment: the browser calls it directly with cookies (ADR 0008).
@@ -41,7 +43,16 @@ async function fetchWithRefresh(request: Request): Promise<Response> {
   return (await refreshSession()) ? fetch(retry) : response;
 }
 
-export const api = createClient<paths>({
+/**
+ * The contract declares the CSRF header on every mutating operation. The client sends it on every request, so it is
+ * removed from call-site types (other header params, e.g. Idempotency-Key, stay).
+ */
+type WithoutCsrfHeader<T> = T extends { parameters: { header: infer H } }
+  ? Omit<T, "parameters"> & { parameters: Omit<T["parameters"], "header"> & { header?: Omit<H, "X-Requested-With"> } }
+  : T;
+type ClientPaths = { [P in keyof paths]: { [M in keyof paths[P]]: WithoutCsrfHeader<paths[P][M]> } };
+
+export const api = createClient<ClientPaths>({
   baseUrl: API_URL,
   credentials: "include",
   headers: CSRF_HEADER,

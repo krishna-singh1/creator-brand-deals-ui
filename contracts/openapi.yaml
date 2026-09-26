@@ -2156,7 +2156,14 @@ components:
             creatorStatus: { $ref: '#/components/schemas/CreatorStatus' }
             pendingConsents:
               type: array
-              items: { $ref: '#/components/schemas/ConsentType' }
+              description: Policies (at their current version) the user still has to accept
+              items: { $ref: '#/components/schemas/PolicyVersion' }
+    PolicyVersion:
+      type: object
+      required: [type, version]
+      properties:
+        type: { $ref: '#/components/schemas/ConsentType' }
+        version: { type: string }
     SelectRoleRequest:
       type: object
       required: [role]

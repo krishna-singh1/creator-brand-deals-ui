@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "contract:sync": "node scripts/sync-contract.mjs",
     "api:types": "openapi-typescript contracts/openapi.yaml -o src/lib/api/schema.d.ts",
-    "api:check": "openapi-typescript contracts/openapi.yaml -o /tmp/branddeal-schema.d.ts && diff -q src/lib/api/schema.d.ts /tmp/branddeal-schema.d.ts"
+    "api:check": "openapi-typescript contracts/openapi.yaml -o /tmp/branddeal-schema.d.ts && diff -q src/lib/api/schema.d.ts /tmp/branddeal-schema.d.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@tanstack/react-query": "5.103.1",
@@ -20,6 +21,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
