@@ -1,4 +1,4 @@
-# BrandDeal Web (`creator-brand-deals-web`)
+# BrandDeal Web (`creator-brand-deals-ui`)
 
 Next.js 16 frontend for BrandDeal, a marketplace connecting Indian D2C brands with Instagram/Facebook
 micro-influencers.

@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# BrandDeal web (`creator-brand-deals-web`)
+# BrandDeal web (`creator-brand-deals-ui`)
 
 Next.js frontend for BrandDeal. It is **deployed separately** from the API (Vercel) and talks to it directly from the
 browser. Product docs, the decision log, event flows and the **API contract are owned by the API repo**
