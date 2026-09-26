@@ -1,0 +1,3183 @@
+openapi: 3.1.0
+info:
+  title: BrandDeal API
+  version: 1.0.0
+  summary: Marketplace connecting Indian D2C brands with Instagram/Facebook micro-influencers.
+  description: |
+    Source of truth for the HTTP API (see docs/adr/0002-contract-first-openapi.md).
+
+    Conventions:
+    - Money is integer **paise** (`*Paise`), currency is always INR.
+    - `format: date` values are IST business days; `format: date-time` values are UTC.
+    - Optional fields without a value are omitted from responses.
+    - Every non-GET request must send `X-Requested-With: fetch` (CSRF protection).
+    - Auth uses httpOnly cookies set by the auth endpoints (`bd_at` access, `bd_rt` refresh).
+    - The web app is deployed separately and calls the API directly with `credentials: 'include'`;
+      only allow-listed origins pass CORS (docs/adr/0008-separate-deployments-direct-api.md).
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://api.{domain}/api/v1
+    description: Deployed API (separate from the web app)
+    variables:
+      domain:
+        default: branddeal.in
+        description: Parent domain shared by web and API
+  - url: http://localhost:8080/api/v1
+    description: Local API
+security:
+  - cookieAuth: []
+tags:
+  - name: auth
+    description: Login, tokens, current user
+  - name: user
+    description: Role, consents, account
+  - name: catalog
+    description: Master data
+  - name: file
+    description: Upload/download via presigned URLs
+  - name: creator
+    description: Creator profile, verification, rate card
+  - name: brand
+    description: Brand profile and creator discovery
+  - name: campaign
+    description: Brand campaigns (requirements) and creator feed
+  - name: application
+    description: Creator applications and brand decisions
+  - name: deal
+    description: Approved collaborations, submissions, payments, reviews
+  - name: notification
+    description: In-app notifications
+  - name: admin
+    description: Internal admin console
+
+paths:
+  # ───────────────────────────── auth ─────────────────────────────
+  /auth/otp/request:
+    post:
+      tags: [auth]
+      operationId: requestOtp
+      summary: Send a 6-digit login code to an email address
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OtpRequest' }
+      responses:
+        '202':
+          description: Code sent (always returned for valid input to avoid account enumeration)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OtpRequested' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/otp/verify:
+    post:
+      tags: [auth]
+      operationId: verifyOtp
+      summary: Verify the code, create the user if new, and set auth cookies
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OtpVerifyRequest' }
+      responses:
+        '200':
+          description: Logged in. Sets `bd_at` and `bd_rt` cookies.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetAuthCookies' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/google:
+    post:
+      tags: [auth]
+      operationId: loginWithGoogle
+      summary: Exchange a Google Identity Services ID token for a session
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoogleLoginRequest' }
+      responses:
+        '200':
+          description: Logged in. Sets `bd_at` and `bd_rt` cookies.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetAuthCookies' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refreshSession
+      summary: Rotate the refresh token and issue a new access token
+      security:
+        - refreshCookie: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Rotated. New cookies set.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetAuthCookies' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Revoke the refresh token and clear cookies
+      security:
+        - refreshCookie: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Logged out
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      summary: Current user and onboarding state
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  # ───────────────────────────── user ─────────────────────────────
+  /me/role:
+    post:
+      tags: [user]
+      operationId: selectRole
+      summary: Choose CREATOR or BRAND (once)
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SelectRoleRequest' }
+      responses:
+        '200':
+          description: Role set. Access token cookie re-issued with the new role.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetAuthCookies' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /me/consents:
+    post:
+      tags: [user]
+      operationId: acceptConsents
+      summary: Record acceptance of policy versions
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AcceptConsentsRequest' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /me:
+    delete:
+      tags: [user]
+      operationId: deleteMyAccount
+      summary: Delete account and anonymise personal data (DPDP)
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Account deleted, cookies cleared
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ───────────────────────────── catalog ─────────────────────────────
+  /catalog/categories:
+    get:
+      tags: [catalog]
+      operationId: listCategories
+      summary: Active categories (niches)
+      security: []
+      responses:
+        '200':
+          description: Categories ordered by sortOrder
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /catalog/cities:
+    get:
+      tags: [catalog]
+      operationId: searchCities
+      summary: Search Indian cities by name prefix
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 50 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: Matching cities
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/City' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /catalog/languages:
+    get:
+      tags: [catalog]
+      operationId: listLanguages
+      summary: Supported content languages
+      security: []
+      responses:
+        '200':
+          description: Languages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Language' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /catalog/deliverable-types:
+    get:
+      tags: [catalog]
+      operationId: listDeliverableTypes
+      summary: Active deliverable types
+      security: []
+      responses:
+        '200':
+          description: Deliverable types
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DeliverableTypeInfo' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ───────────────────────────── file ─────────────────────────────
+  /files/presign:
+    post:
+      tags: [file]
+      operationId: presignUpload
+      summary: Get a presigned PUT URL to upload a file directly to storage
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PresignUploadRequest' }
+      responses:
+        '201':
+          description: Upload URL created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PresignedUpload' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /files/{fileId}/url:
+    get:
+      tags: [file]
+      operationId: getFileUrl
+      summary: Short-lived download URL (owner, deal participant or admin)
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: Download URL
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FileUrl' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ───────────────────────────── creator ─────────────────────────────
+  /creator/profile:
+    get:
+      tags: [creator]
+      operationId: getMyCreatorProfile
+      summary: Own creator profile
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatorProfile' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [creator]
+      operationId: updateMyCreatorProfile
+      summary: Update own creator profile
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCreatorProfileRequest' }
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatorProfile' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /creator/social-accounts:
+    get:
+      tags: [creator]
+      operationId: listMySocialAccounts
+      summary: Own social accounts
+      responses:
+        '200':
+          description: Social accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SocialAccount' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [creator]
+      operationId: addSocialAccount
+      summary: Add an Instagram or Facebook account with self-declared stats
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SocialAccountRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialAccount' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /creator/social-accounts/{socialAccountId}:
+    put:
+      tags: [creator]
+      operationId: updateSocialAccount
+      summary: Update a social account (large follower changes trigger re-verification)
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/SocialAccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SocialAccountRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialAccount' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    delete:
+      tags: [creator]
+      operationId: deleteSocialAccount
+      summary: Remove a social account
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/SocialAccountId'
+      responses:
+        '204':
+          description: Deleted
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /creator/portfolio:
+    get:
+      tags: [creator]
+      operationId: listMyPortfolio
+      summary: Own portfolio items
+      responses:
+        '200':
+          description: Portfolio items
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PortfolioItem' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    post:
+      tags: [creator]
+      operationId: addPortfolioItem
+      summary: Add a portfolio link (max 6)
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PortfolioItemRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioItem' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /creator/portfolio/{portfolioItemId}:
+    delete:
+      tags: [creator]
+      operationId: deletePortfolioItem
+      summary: Remove a portfolio item
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: portfolioItemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Deleted
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /creator/rates:
+    get:
+      tags: [creator]
+      operationId: getMyRateCard
+      summary: Own rate card with platform suggestions alongside
+      responses:
+        '200':
+          description: Rate card
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RateCard' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    put:
+      tags: [creator]
+      operationId: updateMyRateCard
+      summary: Replace own rate card
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRateCardRequest' }
+      responses:
+        '200':
+          description: Updated rate card
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RateCard' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /creator/verification:
+    get:
+      tags: [creator]
+      operationId: getMyVerification
+      summary: Latest verification request status
+      responses:
+        '200':
+          description: Latest verification request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [creator]
+      operationId: submitVerification
+      summary: Submit profile for admin verification with Insights screenshots
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitVerificationRequest' }
+      responses:
+        '201':
+          description: Submitted; profile status becomes PENDING_VERIFICATION
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /creator/price-suggestions:
+    get:
+      tags: [creator]
+      operationId: getMyPriceSuggestions
+      summary: Suggested price ranges for every deliverable type on the creator's platforms
+      responses:
+        '200':
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PriceSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /creator/dashboard:
+    get:
+      tags: [creator]
+      operationId: getCreatorDashboard
+      summary: Counts and pending actions for the creator home screen
+      responses:
+        '200':
+          description: Dashboard
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatorDashboard' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /creator/applications:
+    get:
+      tags: [application]
+      operationId: listMyApplications
+      summary: Creator's own applications
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ApplicationStatus' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of applications
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyApplicationPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  # ───────────────────────────── brand ─────────────────────────────
+  /brand/profile:
+    get:
+      tags: [brand]
+      operationId: getMyBrandProfile
+      summary: Own brand profile
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BrandProfile' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [brand]
+      operationId: updateMyBrandProfile
+      summary: Update own brand profile
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateBrandProfileRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BrandProfile' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /brand/dashboard:
+    get:
+      tags: [brand]
+      operationId: getBrandDashboard
+      summary: Counts and pending actions for the brand home screen
+      responses:
+        '200':
+          description: Dashboard
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BrandDashboard' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /brand/creators:
+    get:
+      tags: [brand]
+      operationId: searchCreators
+      summary: Discover verified creators
+      x-priority: P1
+      parameters:
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: cityId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: platform
+          in: query
+          schema: { $ref: '#/components/schemas/Platform' }
+        - name: followersMin
+          in: query
+          schema: { type: integer, minimum: 0 }
+        - name: followersMax
+          in: query
+          schema: { type: integer, minimum: 0 }
+        - name: engagementRateMin
+          in: query
+          schema: { type: number, minimum: 0 }
+        - name: q
+          in: query
+          description: Name or handle search
+          schema: { type: string, maxLength: 50 }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of creators
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatorCardPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /brand/creators/{creatorId}:
+    get:
+      tags: [brand]
+      operationId: getCreatorForBrand
+      summary: Creator profile as seen by brands (no contact details)
+      parameters:
+        - $ref: '#/components/parameters/CreatorId'
+      responses:
+        '200':
+          description: Public creator profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatorPublicProfile' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ───────────────────────────── campaign ─────────────────────────────
+  /campaigns:
+    post:
+      tags: [campaign]
+      operationId: createCampaign
+      summary: Create a campaign draft
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CampaignInput' }
+      responses:
+        '201':
+          description: Draft created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /campaigns/mine:
+    get:
+      tags: [campaign]
+      operationId: listMyCampaigns
+      summary: Brand's own campaigns
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/CampaignStatus' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of campaigns
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CampaignSummaryPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /campaigns/feed:
+    get:
+      tags: [campaign]
+      operationId: listCampaignFeed
+      summary: Published campaigns the verified creator is eligible for
+      parameters:
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: platform
+          in: query
+          schema: { $ref: '#/components/schemas/Platform' }
+        - name: compensation
+          in: query
+          description: CASH = cash only, BARTER = product only, BOTH = product + cash
+          schema: { $ref: '#/components/schemas/CompensationFilter' }
+        - name: budgetMinPaise
+          in: query
+          schema: { type: integer, format: int64, minimum: 0 }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [MATCH, NEWEST, DEADLINE]
+            default: MATCH
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of feed items
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CampaignFeedPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /campaigns/budget-suggestion:
+    post:
+      tags: [campaign]
+      operationId: suggestCampaignBudget
+      summary: Expected cost per creator for given criteria and deliverables
+      x-priority: P1
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BudgetSuggestionRequest' }
+      responses:
+        '200':
+          description: Suggested range
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PriceRange' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /campaigns/{campaignId}:
+    get:
+      tags: [campaign]
+      operationId: getCampaign
+      summary: Full campaign (owner brand only)
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Campaign
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [campaign]
+      operationId: updateCampaign
+      summary: Update a campaign (all fields in DRAFT; limited fields once PUBLISHED)
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CampaignId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CampaignInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    delete:
+      tags: [campaign]
+      operationId: deleteCampaign
+      summary: Delete a DRAFT campaign
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '204':
+          description: Deleted
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /campaigns/{campaignId}/publish:
+    post:
+      tags: [campaign]
+      operationId: publishCampaign
+      summary: Publish a draft (DRAFT → PUBLISHED)
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /campaigns/{campaignId}/close:
+    post:
+      tags: [campaign]
+      operationId: closeCampaign
+      summary: Stop accepting applications (PUBLISHED → CLOSED)
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Closed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /campaigns/{campaignId}/public:
+    get:
+      tags: [campaign]
+      operationId: getCampaignForCreator
+      summary: Campaign detail for a creator, with personal price suggestion and match
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Campaign for creator
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CampaignForCreator' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ───────────────────────────── application ─────────────────────────────
+  /campaigns/{campaignId}/applications:
+    post:
+      tags: [application]
+      operationId: applyToCampaign
+      summary: Apply with a pitch and quote
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CampaignId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplyRequest' }
+      responses:
+        '201':
+          description: Application created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    get:
+      tags: [application]
+      operationId: listCampaignApplicants
+      summary: Applicants for a campaign (owner brand only)
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ApplicationStatus' }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [NEWEST, FOLLOWERS, ENGAGEMENT, PRICE_ASC, MATCH]
+            default: NEWEST
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of applicants
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApplicantPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /campaigns/{campaignId}/invites:
+    post:
+      tags: [application]
+      operationId: inviteCreator
+      summary: Invite a creator to a campaign
+      x-priority: P1
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CampaignId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InviteCreatorRequest' }
+      responses:
+        '201':
+          description: Invite created (application in INVITED state)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /applications/{applicationId}/withdraw:
+    post:
+      tags: [application]
+      operationId: withdrawApplication
+      summary: Creator withdraws before a decision
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Withdrawn
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{applicationId}/shortlist:
+    post:
+      tags: [application]
+      operationId: shortlistApplication
+      summary: Brand shortlists an applicant
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Shortlisted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{applicationId}/reject:
+    post:
+      tags: [application]
+      operationId: rejectApplication
+      summary: Brand rejects an applicant
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/ApplicationId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReasonRequest' }
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{applicationId}/approve:
+    post:
+      tags: [application]
+      operationId: approveApplication
+      summary: Brand approves an applicant; creates a Deal atomically
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApproveApplicationRequest' }
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApproveApplicationResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{applicationId}/accept-invite:
+    post:
+      tags: [application]
+      operationId: acceptInvite
+      summary: Creator accepts an invite by submitting a pitch and quote
+      x-priority: P1
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/ApplicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplyRequest' }
+      responses:
+        '200':
+          description: Accepted (status APPLIED)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /applications/{applicationId}/decline-invite:
+    post:
+      tags: [application]
+      operationId: declineInvite
+      summary: Creator declines an invite
+      x-priority: P1
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Declined
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ───────────────────────────── deal ─────────────────────────────
+  /deals:
+    get:
+      tags: [deal]
+      operationId: listMyDeals
+      summary: Deals where the caller is the brand or the creator
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/DealStatus' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of deals
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealSummaryPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /deals/{dealId}:
+    get:
+      tags: [deal]
+      operationId: getDeal
+      summary: Deal detail including counter-party contact, deliverables and timeline
+      parameters:
+        - $ref: '#/components/parameters/DealId'
+      responses:
+        '200':
+          description: Deal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /deals/{dealId}/product-shipped:
+    post:
+      tags: [deal]
+      operationId: markProductShipped
+      summary: Brand marks the product as shipped (PRODUCT / PRODUCT_PLUS_CASH deals)
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DealId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductShippedRequest' }
+      responses:
+        '200':
+          description: Updated deal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /deals/{dealId}/product-received:
+    post:
+      tags: [deal]
+      operationId: markProductReceived
+      summary: Creator confirms the product was received
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DealId'
+      responses:
+        '200':
+          description: Updated deal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /deals/{dealId}/deliverables/{deliverableId}/submissions:
+    post:
+      tags: [deal]
+      operationId: createSubmission
+      summary: Creator submits a live post for a deliverable
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DealId'
+        - name: deliverableId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSubmissionRequest' }
+      responses:
+        '201':
+          description: Submission created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Submission' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /submissions/{submissionId}/approve:
+    post:
+      tags: [deal]
+      operationId: approveSubmission
+      summary: Brand approves a submission
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/SubmissionId'
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Submission' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /submissions/{submissionId}/request-changes:
+    post:
+      tags: [deal]
+      operationId: requestSubmissionChanges
+      summary: Brand requests changes on a submission
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/SubmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommentRequest' }
+      responses:
+        '200':
+          description: Changes requested
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Submission' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /deals/{dealId}/payment:
+    post:
+      tags: [deal]
+      operationId: markPayment
+      summary: Brand records that it paid the creator off-platform
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DealId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MarkPaymentRequest' }
+      responses:
+        '200':
+          description: Updated deal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /deals/{dealId}/payment/confirm:
+    post:
+      tags: [deal]
+      operationId: confirmPayment
+      summary: Creator confirms the payment was received (completes the deal)
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DealId'
+      responses:
+        '200':
+          description: Updated deal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /deals/{dealId}/cancel:
+    post:
+      tags: [deal]
+      operationId: cancelDeal
+      summary: Either party cancels before content is submitted
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DealId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReasonRequired' }
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /deals/{dealId}/disputes:
+    post:
+      tags: [deal]
+      operationId: raiseDispute
+      summary: Raise an issue for admin review
+      x-priority: P1
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DealId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RaiseDisputeRequest' }
+      responses:
+        '201':
+          description: Dispute raised
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dispute' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /deals/{dealId}/reviews:
+    post:
+      tags: [deal]
+      operationId: createReview
+      summary: Rate the other party after completion
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DealId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReviewRequest' }
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Review' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /deals/{dealId}/messages:
+    get:
+      tags: [deal]
+      operationId: listDealMessages
+      summary: Messages in the deal thread
+      x-priority: P1
+      parameters:
+        - $ref: '#/components/parameters/DealId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of messages (newest first)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealMessagePage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+    post:
+      tags: [deal]
+      operationId: sendDealMessage
+      summary: Post a message to the deal thread
+      x-priority: P1
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DealId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendMessageRequest' }
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealMessage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ───────────────────────────── notification ─────────────────────────────
+  /notifications:
+    get:
+      tags: [notification]
+      operationId: listNotifications
+      summary: Caller's notifications (newest first)
+      parameters:
+        - name: unread
+          in: query
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of notifications
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /notifications/{notificationId}/read:
+    post:
+      tags: [notification]
+      operationId: markNotificationRead
+      summary: Mark one notification read
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: notificationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Marked read
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /notifications/read-all:
+    post:
+      tags: [notification]
+      operationId: markAllNotificationsRead
+      summary: Mark all notifications read
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Marked read
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  # ───────────────────────────── admin ─────────────────────────────
+  /admin/verifications:
+    get:
+      tags: [admin]
+      operationId: adminListVerifications
+      summary: Verification queue
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/VerificationStatus' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of verification requests
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminVerificationPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/verifications/{verificationId}:
+    get:
+      tags: [admin]
+      operationId: adminGetVerification
+      summary: Verification detail with creator profile and proof URLs
+      parameters:
+        - $ref: '#/components/parameters/VerificationId'
+      responses:
+        '200':
+          description: Detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminVerificationDetail' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/verifications/{verificationId}/approve:
+    post:
+      tags: [admin]
+      operationId: adminApproveVerification
+      summary: Approve creator; optionally correct verified metrics
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/VerificationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApproveVerificationRequest' }
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/verifications/{verificationId}/reject:
+    post:
+      tags: [admin]
+      operationId: adminRejectVerification
+      summary: Reject creator with a reason
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/VerificationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RejectVerificationRequest' }
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/users:
+    get:
+      tags: [admin]
+      operationId: adminListUsers
+      summary: Search users
+      parameters:
+        - name: role
+          in: query
+          schema: { $ref: '#/components/schemas/Role' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/UserStatus' }
+        - name: q
+          in: query
+          description: Email, name or handle
+          schema: { type: string, maxLength: 100 }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of users
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/users/{userId}/suspend:
+    post:
+      tags: [admin]
+      operationId: adminSuspendUser
+      summary: Suspend a user
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReasonRequired' }
+      responses:
+        '200':
+          description: Suspended
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUser' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/users/{userId}/unsuspend:
+    post:
+      tags: [admin]
+      operationId: adminUnsuspendUser
+      summary: Lift a suspension
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Active again
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUser' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/campaigns:
+    get:
+      tags: [admin]
+      operationId: adminListCampaigns
+      summary: All campaigns
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/CampaignStatus' }
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of campaigns
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CampaignSummaryPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/campaigns/{campaignId}/unpublish:
+    post:
+      tags: [admin]
+      operationId: adminUnpublishCampaign
+      summary: Take down a campaign for a policy violation
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CampaignId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReasonRequired' }
+      responses:
+        '200':
+          description: Unpublished
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/deals:
+    get:
+      tags: [admin]
+      operationId: adminListDeals
+      summary: All deals
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/DealStatus' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of deals
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealSummaryPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/pricing/rate-table:
+    get:
+      tags: [admin]
+      operationId: adminGetRateTable
+      summary: Active pricing rate table
+      responses:
+        '200':
+          description: Rate table
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RateTable' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [admin]
+      operationId: adminReplaceRateTable
+      summary: Publish a new rate table version
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplaceRateTableRequest' }
+      responses:
+        '200':
+          description: New version active
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RateTable' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /admin/audit-logs:
+    get:
+      tags: [admin]
+      operationId: adminListAuditLogs
+      summary: Admin action audit trail
+      parameters:
+        - name: entityType
+          in: query
+          schema: { type: string, maxLength: 50 }
+        - name: entityId
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of audit entries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditLogPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/metrics:
+    get:
+      tags: [admin]
+      operationId: adminGetMetrics
+      summary: Headline counts for the admin dashboard
+      responses:
+        '200':
+          description: Metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminMetrics' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: bd_at
+      description: Short-lived JWT access token set by the auth endpoints.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: bd_rt
+      description: Opaque refresh token, only sent to /auth paths.
+
+  headers:
+    SetAuthCookies:
+      description: '`bd_at` (access, 15 min) and `bd_rt` (refresh, 30 days); HttpOnly; Secure; SameSite=Lax'
+      schema: { type: string }
+
+  parameters:
+    CsrfHeader:
+      name: X-Requested-With
+      in: header
+      required: true
+      description: Must be `fetch`. Protects against cross-site form posts.
+      schema:
+        type: string
+        const: fetch
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, maxLength: 64 }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor from a previous page's `nextCursor`
+      schema: { type: string, maxLength: 200 }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    CampaignId:
+      name: campaignId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ApplicationId:
+      name: applicationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DealId:
+      name: dealId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SubmissionId:
+      name: submissionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CreatorId:
+      name: creatorId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    FileId:
+      name: fileId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SocialAccountId:
+      name: socialAccountId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    VerificationId:
+      name: verificationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: Malformed request or domain-level bad input (e.g. OTP_INVALID)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthenticated:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Not allowed (role, status, CSRF header)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Not found or not accessible to the caller
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: State conflict (duplicate, invalid transition)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unprocessable:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    TooManyRequests:
+      description: Rate limited
+      headers:
+        Retry-After:
+          description: Seconds to wait
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotImplemented:
+      description: P1 operation not yet available
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    # ─────────── errors ───────────
+    ErrorCode:
+      type: string
+      enum:
+        - MALFORMED_REQUEST
+        - VALIDATION_FAILED
+        - UNAUTHENTICATED
+        - FORBIDDEN
+        - NOT_FOUND
+        - CONFLICT
+        - INVALID_STATE_TRANSITION
+        - RATE_LIMITED
+        - INTERNAL_ERROR
+        - NOT_IMPLEMENTED
+        - OTP_INVALID
+        - OTP_EXPIRED
+        - OTP_TOO_MANY_ATTEMPTS
+        - GOOGLE_TOKEN_INVALID
+        - REFRESH_TOKEN_INVALID
+        - ACCOUNT_SUSPENDED
+        - ROLE_NOT_SELECTED
+        - ROLE_ALREADY_SET
+        - CONSENT_REQUIRED
+        - PROFILE_INCOMPLETE
+        - CREATOR_NOT_VERIFIED
+        - CREATOR_UNDERAGE
+        - VERIFICATION_ALREADY_PENDING
+        - CATEGORY_LIMIT_EXCEEDED
+        - CREATOR_NOT_ELIGIBLE
+        - APPLICATION_ALREADY_EXISTS
+        - CAMPAIGN_NOT_OPEN
+        - CAMPAIGN_FILLED
+        - DISCLOSURE_REQUIRED
+        - REVIEW_ALREADY_EXISTS
+        - FILE_TYPE_NOT_ALLOWED
+        - FILE_TOO_LARGE
+        - FILE_NOT_UPLOADED
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+            traceId: { type: string }
+
+    # ─────────── enums ───────────
+    Role:
+      type: string
+      enum: [CREATOR, BRAND, ADMIN]
+    SelectableRole:
+      type: string
+      enum: [CREATOR, BRAND]
+    UserStatus:
+      type: string
+      enum: [ACTIVE, SUSPENDED, DELETED]
+    ConsentType:
+      type: string
+      enum: [TERMS, PRIVACY, ASCI_CODE, BRAND_CODE, MARKETING]
+    Platform:
+      type: string
+      enum: [INSTAGRAM, FACEBOOK]
+    DeliverableType:
+      type: string
+      enum: [IG_REEL, IG_POST, IG_CAROUSEL, IG_STORY, FB_POST, FB_REEL]
+    CompensationType:
+      type: string
+      description: CASH = cash only, PRODUCT = barter (product only), PRODUCT_PLUS_CASH = product plus cash
+      enum: [CASH, PRODUCT, PRODUCT_PLUS_CASH]
+    CompensationFilter:
+      type: string
+      enum: [CASH, BARTER, BOTH]
+    Gender:
+      type: string
+      enum: [FEMALE, MALE, NON_BINARY, PREFER_NOT_TO_SAY]
+    GenderPreference:
+      type: string
+      enum: [ANY, FEMALE, MALE]
+    CreatorStatus:
+      type: string
+      enum: [DRAFT, PENDING_VERIFICATION, VERIFIED, REJECTED, SUSPENDED]
+    BrandStatus:
+      type: string
+      enum: [ACTIVE, SUSPENDED]
+    MetricSource:
+      type: string
+      enum: [SELF_DECLARED, ADMIN_VERIFIED, META_API]
+    VerificationStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED]
+    CampaignStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, CLOSED, ARCHIVED, UNPUBLISHED_BY_ADMIN]
+    ApplicationStatus:
+      type: string
+      enum: [INVITED, APPLIED, SHORTLISTED, APPROVED, REJECTED, WITHDRAWN, DECLINED, EXPIRED]
+    ApplicationOrigin:
+      type: string
+      enum: [APPLIED, INVITED]
+    DealStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - PRODUCT_SHIPPED
+        - PRODUCT_RECEIVED
+        - IN_PROGRESS
+        - UNDER_REVIEW
+        - CONTENT_APPROVED
+        - PAYMENT_MARKED
+        - COMPLETED
+        - CANCELLED
+        - DISPUTED
+    DeliverableStatus:
+      type: string
+      enum: [PENDING, SUBMITTED, CHANGES_REQUESTED, APPROVED]
+    SubmissionReviewStatus:
+      type: string
+      enum: [PENDING, APPROVED, CHANGES_REQUESTED]
+    PaymentMode:
+      type: string
+      enum: [UPI, BANK_TRANSFER, OTHER]
+    FilePurpose:
+      type: string
+      enum: [AVATAR, BRAND_LOGO, VERIFICATION_PROOF, CAMPAIGN_BRIEF, SUBMISSION_SCREENSHOT, PORTFOLIO_THUMBNAIL]
+    FollowerTier:
+      type: string
+      enum: [T1, T2, T3, T4, T5]
+    CompanySize:
+      type: string
+      enum: [SOLO, S_2_10, S_11_50, S_51_200, S_200_PLUS]
+    DisputeReason:
+      type: string
+      enum: [NOT_PAID, NOT_DELIVERED, CONTENT_ISSUE, PRODUCT_NOT_RECEIVED, OTHER]
+    NotificationType:
+      type: string
+      enum:
+        - VERIFICATION_APPROVED
+        - VERIFICATION_REJECTED
+        - APPLICATION_RECEIVED
+        - APPLICATION_APPROVED
+        - APPLICATION_REJECTED
+        - INVITE_RECEIVED
+        - PRODUCT_SHIPPED
+        - SUBMISSION_RECEIVED
+        - SUBMISSION_APPROVED
+        - CHANGES_REQUESTED
+        - PAYMENT_MARKED
+        - PAYMENT_CONFIRMED
+        - DEAL_CANCELLED
+        - DEAL_COMPLETED
+        - SYSTEM
+
+    # ─────────── shared ───────────
+    Paise:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Amount in paise (₹1 = 100)
+    PriceRange:
+      type: object
+      required: [minPaise, maxPaise]
+      properties:
+        minPaise: { $ref: '#/components/schemas/Paise' }
+        maxPaise: { $ref: '#/components/schemas/Paise' }
+        estimated:
+          type: boolean
+          description: True when based on self-declared (not admin-verified) metrics
+    ReasonRequest:
+      type: object
+      properties:
+        reason: { type: string, maxLength: 500 }
+    ReasonRequired:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 500 }
+    CommentRequest:
+      type: object
+      required: [comment]
+      properties:
+        comment: { type: string, minLength: 3, maxLength: 1000 }
+    UserRef:
+      type: object
+      required: [id, displayName]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string }
+        avatarUrl: { type: string, format: uri }
+    Contact:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string, description: E.164 }
+
+    # ─────────── auth / user ───────────
+    OtpRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+    OtpRequested:
+      type: object
+      required: [expiresInSeconds, resendAfterSeconds]
+      properties:
+        expiresInSeconds: { type: integer }
+        resendAfterSeconds: { type: integer }
+    OtpVerifyRequest:
+      type: object
+      required: [email, otp]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        otp: { type: string, pattern: '^[0-9]{6}$' }
+    GoogleLoginRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken: { type: string, minLength: 10, maxLength: 4096 }
+    Me:
+      type: object
+      required: [id, email, status, onboarding]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { $ref: '#/components/schemas/UserStatus' }
+        displayName: { type: string }
+        avatarUrl: { type: string, format: uri }
+        onboarding:
+          type: object
+          required: [roleSelected, consentsAccepted, profileComplete]
+          properties:
+            roleSelected: { type: boolean }
+            consentsAccepted: { type: boolean }
+            profileComplete: { type: boolean }
+            creatorStatus: { $ref: '#/components/schemas/CreatorStatus' }
+            pendingConsents:
+              type: array
+              items: { $ref: '#/components/schemas/ConsentType' }
+    SelectRoleRequest:
+      type: object
+      required: [role]
+      properties:
+        role: { $ref: '#/components/schemas/SelectableRole' }
+    AcceptConsentsRequest:
+      type: object
+      required: [consents]
+      properties:
+        consents:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [type, version]
+            properties:
+              type: { $ref: '#/components/schemas/ConsentType' }
+              version: { type: string, maxLength: 20 }
+
+    # ─────────── catalog ───────────
+    Category:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+    City:
+      type: object
+      required: [id, name, state, tier]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        state: { type: string }
+        tier: { type: integer, minimum: 1, maximum: 3 }
+    Language:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, description: ISO 639-1 }
+        name: { type: string }
+    DeliverableTypeInfo:
+      type: object
+      required: [code, platform, label]
+      properties:
+        code: { $ref: '#/components/schemas/DeliverableType' }
+        platform: { $ref: '#/components/schemas/Platform' }
+        label: { type: string }
+        description: { type: string }
+
+    # ─────────── files ───────────
+    PresignUploadRequest:
+      type: object
+      required: [purpose, contentType, sizeBytes]
+      properties:
+        purpose: { $ref: '#/components/schemas/FilePurpose' }
+        contentType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp, application/pdf]
+        sizeBytes: { type: integer, minimum: 1, maximum: 10485760 }
+        fileName: { type: string, maxLength: 200 }
+    PresignedUpload:
+      type: object
+      required: [fileId, uploadUrl, method, headers, expiresAt]
+      properties:
+        fileId: { type: string, format: uuid }
+        uploadUrl: { type: string, format: uri }
+        method:
+          type: string
+          const: PUT
+        headers:
+          type: object
+          additionalProperties: { type: string }
+        expiresAt: { type: string, format: date-time }
+    FileUrl:
+      type: object
+      required: [url, expiresAt]
+      properties:
+        url: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+
+    # ─────────── creator ───────────
+    AudienceInfo:
+      type: object
+      properties:
+        topCityIds:
+          type: array
+          maxItems: 5
+          items: { type: string, format: uuid }
+        femalePercent: { type: integer, minimum: 0, maximum: 100 }
+        malePercent: { type: integer, minimum: 0, maximum: 100 }
+        topAgeBand:
+          type: string
+          enum: [AGE_13_17, AGE_18_24, AGE_25_34, AGE_35_44, AGE_45_PLUS]
+    CreatorProfile:
+      type: object
+      required: [id, status, categoryIds, languages]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/CreatorStatus' }
+        displayName: { type: string }
+        fullName: { type: string }
+        avatarUrl: { type: string, format: uri }
+        bio: { type: string }
+        gender: { $ref: '#/components/schemas/Gender' }
+        dateOfBirth: { type: string, format: date }
+        city: { $ref: '#/components/schemas/City' }
+        languages:
+          type: array
+          items: { type: string }
+        categoryIds:
+          type: array
+          maxItems: 3
+          items: { type: string, format: uuid }
+        phone: { type: string }
+        contactEmail: { type: string, format: email }
+        audience: { $ref: '#/components/schemas/AudienceInfo' }
+        ratingAvg: { type: number }
+        ratingCount: { type: integer }
+        dealsCompleted: { type: integer }
+        missingFields:
+          type: array
+          description: Fields required before verification can be submitted
+          items: { type: string }
+    UpdateCreatorProfileRequest:
+      type: object
+      required: [displayName, fullName, dateOfBirth, cityId, languages, categoryIds, phone, contactEmail]
+      properties:
+        displayName: { type: string, minLength: 2, maxLength: 60 }
+        fullName: { type: string, minLength: 2, maxLength: 100 }
+        avatarFileId: { type: string, format: uuid }
+        bio: { type: string, maxLength: 500 }
+        gender: { $ref: '#/components/schemas/Gender' }
+        dateOfBirth: { type: string, format: date }
+        cityId: { type: string, format: uuid }
+        languages:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { type: string, maxLength: 5 }
+        categoryIds:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items: { type: string, format: uuid }
+        phone: { type: string, pattern: '^\+91[6-9][0-9]{9}$' }
+        contactEmail: { type: string, format: email }
+        audience: { $ref: '#/components/schemas/AudienceInfo' }
+    SocialAccount:
+      type: object
+      required: [id, platform, handle, followers, avgLikes, avgComments, engagementRate, source, isPrimary]
+      properties:
+        id: { type: string, format: uuid }
+        platform: { $ref: '#/components/schemas/Platform' }
+        handle: { type: string, description: Instagram username or Facebook page URL }
+        profileUrl: { type: string, format: uri }
+        followers: { type: integer, minimum: 0 }
+        avgLikes: { type: integer, minimum: 0 }
+        avgComments: { type: integer, minimum: 0 }
+        avgViews: { type: integer, minimum: 0 }
+        engagementRate: { type: number, description: 'Percent, e.g. 4.12' }
+        source: { $ref: '#/components/schemas/MetricSource' }
+        isPrimary: { type: boolean }
+    SocialAccountRequest:
+      type: object
+      required: [platform, handle, followers, avgLikes, avgComments]
+      properties:
+        platform: { $ref: '#/components/schemas/Platform' }
+        handle: { type: string, minLength: 1, maxLength: 200 }
+        followers: { type: integer, minimum: 0, maximum: 100000000 }
+        avgLikes: { type: integer, minimum: 0 }
+        avgComments: { type: integer, minimum: 0 }
+        avgViews: { type: integer, minimum: 0 }
+        isPrimary: { type: boolean, default: false }
+    PortfolioItem:
+      type: object
+      required: [id, url, platform]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        platform: { $ref: '#/components/schemas/Platform' }
+        brandName: { type: string }
+        thumbnailUrl: { type: string, format: uri }
+    PortfolioItemRequest:
+      type: object
+      required: [url, platform]
+      properties:
+        url: { type: string, format: uri, maxLength: 500 }
+        platform: { $ref: '#/components/schemas/Platform' }
+        brandName: { type: string, maxLength: 100 }
+        thumbnailFileId: { type: string, format: uuid }
+    RateCardEntry:
+      type: object
+      required: [deliverableType]
+      properties:
+        deliverableType: { $ref: '#/components/schemas/DeliverableType' }
+        pricePaise: { $ref: '#/components/schemas/Paise' }
+        suggested: { $ref: '#/components/schemas/PriceRange' }
+    RateCard:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/RateCardEntry' }
+    UpdateRateCardRequest:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          maxItems: 6
+          items:
+            type: object
+            required: [deliverableType, pricePaise]
+            properties:
+              deliverableType: { $ref: '#/components/schemas/DeliverableType' }
+              pricePaise: { $ref: '#/components/schemas/Paise' }
+    SubmitVerificationRequest:
+      type: object
+      required: [proofFileIds]
+      properties:
+        proofFileIds:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { type: string, format: uuid }
+        note: { type: string, maxLength: 500 }
+    VerificationRequest:
+      type: object
+      required: [id, status, submittedAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/VerificationStatus' }
+        submittedAt: { type: string, format: date-time }
+        reviewedAt: { type: string, format: date-time }
+        reason: { type: string }
+    PriceSuggestion:
+      type: object
+      required: [platform, deliverableType, tier, range]
+      properties:
+        platform: { $ref: '#/components/schemas/Platform' }
+        deliverableType: { $ref: '#/components/schemas/DeliverableType' }
+        tier: { $ref: '#/components/schemas/FollowerTier' }
+        range: { $ref: '#/components/schemas/PriceRange' }
+        rateTableVersion: { type: integer }
+    CreatorDashboard:
+      type: object
+      required: [status, openApplications, activeDeals, completedDeals, actionItems]
+      properties:
+        status: { $ref: '#/components/schemas/CreatorStatus' }
+        openApplications: { type: integer }
+        activeDeals: { type: integer }
+        completedDeals: { type: integer }
+        declaredEarningsPaise: { $ref: '#/components/schemas/Paise' }
+        actionItems:
+          type: array
+          items: { $ref: '#/components/schemas/ActionItem' }
+    ActionItem:
+      type: object
+      required: [type, title, link]
+      properties:
+        type: { type: string, description: 'e.g. SUBMIT_CONTENT, CONFIRM_PAYMENT, REVIEW_APPLICANTS' }
+        title: { type: string }
+        link: { type: string, description: Relative web path }
+        dueDate: { type: string, format: date }
+    CreatorCard:
+      type: object
+      required: [id, displayName, status, primaryPlatform, followers, engagementRate, categoryIds]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string }
+        avatarUrl: { type: string, format: uri }
+        city: { type: string }
+        status: { $ref: '#/components/schemas/CreatorStatus' }
+        primaryPlatform: { $ref: '#/components/schemas/Platform' }
+        handle: { type: string }
+        followers: { type: integer }
+        engagementRate: { type: number }
+        metricSource: { $ref: '#/components/schemas/MetricSource' }
+        categoryIds:
+          type: array
+          items: { type: string, format: uuid }
+        ratingAvg: { type: number }
+        dealsCompleted: { type: integer }
+    CreatorPublicProfile:
+      allOf:
+        - $ref: '#/components/schemas/CreatorCard'
+        - type: object
+          required: [socialAccounts, portfolio]
+          properties:
+            bio: { type: string }
+            languages:
+              type: array
+              items: { type: string }
+            audience: { $ref: '#/components/schemas/AudienceInfo' }
+            socialAccounts:
+              type: array
+              items: { $ref: '#/components/schemas/SocialAccount' }
+            portfolio:
+              type: array
+              items: { $ref: '#/components/schemas/PortfolioItem' }
+            rateCard:
+              type: array
+              items: { $ref: '#/components/schemas/RateCardEntry' }
+
+    # ─────────── brand ───────────
+    BrandProfile:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/BrandStatus' }
+        brandName: { type: string }
+        logoUrl: { type: string, format: uri }
+        website: { type: string, format: uri }
+        instagramHandle: { type: string }
+        categoryId: { type: string, format: uuid }
+        companySize: { $ref: '#/components/schemas/CompanySize' }
+        city: { $ref: '#/components/schemas/City' }
+        contactName: { type: string }
+        contactPhone: { type: string }
+        contactEmail: { type: string, format: email }
+        gstin: { type: string }
+        gstVerified: { type: boolean }
+        ratingAvg: { type: number }
+        ratingCount: { type: integer }
+        dealsCompleted: { type: integer }
+        paymentsConfirmedPercent: { type: integer, minimum: 0, maximum: 100 }
+        missingFields:
+          type: array
+          items: { type: string }
+    UpdateBrandProfileRequest:
+      type: object
+      required: [brandName, categoryId, contactName, contactPhone, contactEmail]
+      properties:
+        brandName: { type: string, minLength: 2, maxLength: 100 }
+        logoFileId: { type: string, format: uuid }
+        website: { type: string, format: uri, maxLength: 300 }
+        instagramHandle: { type: string, maxLength: 60 }
+        categoryId: { type: string, format: uuid }
+        companySize: { $ref: '#/components/schemas/CompanySize' }
+        cityId: { type: string, format: uuid }
+        contactName: { type: string, minLength: 2, maxLength: 100 }
+        contactPhone: { type: string, pattern: '^\+91[6-9][0-9]{9}$' }
+        contactEmail: { type: string, format: email }
+        gstin: { type: string, pattern: '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$' }
+    BrandSummary:
+      type: object
+      required: [id, brandName]
+      properties:
+        id: { type: string, format: uuid }
+        brandName: { type: string }
+        logoUrl: { type: string, format: uri }
+        website: { type: string, format: uri }
+        ratingAvg: { type: number }
+        paymentsConfirmedPercent: { type: integer }
+        gstVerified: { type: boolean }
+    BrandDashboard:
+      type: object
+      required: [activeCampaigns, newApplicants, activeDeals, actionItems]
+      properties:
+        activeCampaigns: { type: integer }
+        newApplicants: { type: integer }
+        activeDeals: { type: integer }
+        completedDeals: { type: integer }
+        actionItems:
+          type: array
+          items: { $ref: '#/components/schemas/ActionItem' }
+
+    # ─────────── campaign ───────────
+    CampaignCriteria:
+      type: object
+      required: [followersMin, followersMax]
+      properties:
+        followersMin: { type: integer, minimum: 0 }
+        followersMax: { type: integer, minimum: 0 }
+        cityIds:
+          type: array
+          maxItems: 20
+          items: { type: string, format: uuid }
+        languages:
+          type: array
+          maxItems: 10
+          items: { type: string }
+        gender: { $ref: '#/components/schemas/GenderPreference' }
+        engagementRateMin: { type: number, minimum: 0 }
+    CampaignDeliverable:
+      type: object
+      required: [deliverableType, quantity]
+      properties:
+        deliverableType: { $ref: '#/components/schemas/DeliverableType' }
+        quantity: { type: integer, minimum: 1, maximum: 10 }
+        notes: { type: string, maxLength: 300 }
+    CampaignInput:
+      type: object
+      required: [title, description, platform, categoryIds, compensationType, deliverables, criteria, creatorsNeeded, applyBy, contentWindowStart, contentWindowEnd]
+      properties:
+        title: { type: string, minLength: 5, maxLength: 120 }
+        description: { type: string, minLength: 20, maxLength: 5000 }
+        productName: { type: string, maxLength: 120 }
+        productUrl: { type: string, format: uri, maxLength: 500 }
+        productValuePaise:
+          allOf: [{ $ref: '#/components/schemas/Paise' }]
+          description: MRP. Required when compensationType is PRODUCT or PRODUCT_PLUS_CASH.
+        platform: { $ref: '#/components/schemas/Platform' }
+        categoryIds:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items: { type: string, format: uuid }
+        compensationType: { $ref: '#/components/schemas/CompensationType' }
+        budgetMinPaise:
+          allOf: [{ $ref: '#/components/schemas/Paise' }]
+          description: Per creator cash budget. Required unless compensationType is PRODUCT.
+        budgetMaxPaise: { $ref: '#/components/schemas/Paise' }
+        deliverables:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items: { $ref: '#/components/schemas/CampaignDeliverable' }
+        criteria: { $ref: '#/components/schemas/CampaignCriteria' }
+        creatorsNeeded: { type: integer, minimum: 1, maximum: 100 }
+        guidelines: { type: string, maxLength: 5000 }
+        hashtags:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 50 }
+        mentions:
+          type: array
+          maxItems: 10
+          items: { type: string, maxLength: 60 }
+        referenceLinks:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uri }
+        briefFileId: { type: string, format: uuid }
+        applyBy: { type: string, format: date }
+        contentWindowStart: { type: string, format: date }
+        contentWindowEnd: { type: string, format: date }
+    Campaign:
+      allOf:
+        - $ref: '#/components/schemas/CampaignInput'
+        - type: object
+          required: [id, status, brand, approvedCount, applicationCount, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            status: { $ref: '#/components/schemas/CampaignStatus' }
+            brand: { $ref: '#/components/schemas/BrandSummary' }
+            briefUrl: { type: string, format: uri }
+            approvedCount: { type: integer }
+            applicationCount: { type: integer }
+            publishedAt: { type: string, format: date-time }
+            closedAt: { type: string, format: date-time }
+            createdAt: { type: string, format: date-time }
+    CampaignSummary:
+      type: object
+      required: [id, title, status, platform, compensationType, deliverables, creatorsNeeded, approvedCount, applicationCount, applyBy, brand]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        status: { $ref: '#/components/schemas/CampaignStatus' }
+        platform: { $ref: '#/components/schemas/Platform' }
+        compensationType: { $ref: '#/components/schemas/CompensationType' }
+        budgetMinPaise: { $ref: '#/components/schemas/Paise' }
+        budgetMaxPaise: { $ref: '#/components/schemas/Paise' }
+        productValuePaise: { $ref: '#/components/schemas/Paise' }
+        deliverables:
+          type: array
+          items: { $ref: '#/components/schemas/CampaignDeliverable' }
+        creatorsNeeded: { type: integer }
+        approvedCount: { type: integer }
+        applicationCount: { type: integer }
+        applyBy: { type: string, format: date }
+        brand: { $ref: '#/components/schemas/BrandSummary' }
+    CampaignFeedItem:
+      allOf:
+        - $ref: '#/components/schemas/CampaignSummary'
+        - type: object
+          required: [matchScore]
+          properties:
+            matchScore: { type: integer, minimum: 0, maximum: 100 }
+            categoryIds:
+              type: array
+              items: { type: string, format: uuid }
+            lowValueOffer:
+              type: boolean
+              description: Barter only - product MRP is below 50% of the creator's suggested minimum
+            myApplicationStatus: { $ref: '#/components/schemas/ApplicationStatus' }
+    CampaignForCreator:
+      type: object
+      required: [campaign, eligible, matchScore, suggestedQuote]
+      properties:
+        campaign: { $ref: '#/components/schemas/Campaign' }
+        eligible: { type: boolean }
+        ineligibleReasons:
+          type: array
+          items: { type: string }
+        matchScore: { type: integer, minimum: 0, maximum: 100 }
+        suggestedQuote:
+          type: array
+          description: Per-deliverable suggested cash price for this creator (cash part only for PRODUCT_PLUS_CASH)
+          items: { $ref: '#/components/schemas/QuoteLineSuggestion' }
+        lowValueOffer: { type: boolean }
+        myApplication: { $ref: '#/components/schemas/Application' }
+    QuoteLineSuggestion:
+      type: object
+      required: [deliverableType, quantity, range]
+      properties:
+        deliverableType: { $ref: '#/components/schemas/DeliverableType' }
+        quantity: { type: integer }
+        range: { $ref: '#/components/schemas/PriceRange' }
+    BudgetSuggestionRequest:
+      type: object
+      required: [platform, criteria, deliverables]
+      properties:
+        platform: { $ref: '#/components/schemas/Platform' }
+        criteria: { $ref: '#/components/schemas/CampaignCriteria' }
+        deliverables:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/CampaignDeliverable' }
+        compensationType: { $ref: '#/components/schemas/CompensationType' }
+        productValuePaise: { $ref: '#/components/schemas/Paise' }
+
+    # ─────────── application ───────────
+    QuoteLine:
+      type: object
+      required: [deliverableType, quantity, unitPricePaise]
+      properties:
+        deliverableType: { $ref: '#/components/schemas/DeliverableType' }
+        quantity: { type: integer, minimum: 1, maximum: 10 }
+        unitPricePaise: { $ref: '#/components/schemas/Paise' }
+    ApplyRequest:
+      type: object
+      required: [pitch, quote, availabilityConfirmed]
+      properties:
+        pitch: { type: string, minLength: 50, maxLength: 2000 }
+        quote:
+          type: array
+          description: Must cover every campaign deliverable. Cash part only; for PRODUCT campaigns send unitPricePaise 0.
+          minItems: 1
+          maxItems: 6
+          items: { $ref: '#/components/schemas/QuoteLine' }
+        availabilityConfirmed:
+          type: boolean
+          const: true
+    InviteCreatorRequest:
+      type: object
+      required: [creatorId]
+      properties:
+        creatorId: { type: string, format: uuid }
+        message: { type: string, maxLength: 1000 }
+    Application:
+      type: object
+      required: [id, campaignId, creatorId, status, origin, quote, quotedTotalPaise, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string, format: uuid }
+        creatorId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/ApplicationStatus' }
+        origin: { $ref: '#/components/schemas/ApplicationOrigin' }
+        pitch: { type: string }
+        quote:
+          type: array
+          items: { $ref: '#/components/schemas/QuoteLine' }
+        quotedTotalPaise: { $ref: '#/components/schemas/Paise' }
+        suggestedTotal: { $ref: '#/components/schemas/PriceRange' }
+        overBudget: { type: boolean }
+        decisionReason: { type: string }
+        dealId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        decidedAt: { type: string, format: date-time }
+    MyApplication:
+      allOf:
+        - $ref: '#/components/schemas/Application'
+        - type: object
+          required: [campaign]
+          properties:
+            campaign: { $ref: '#/components/schemas/CampaignSummary' }
+    Applicant:
+      allOf:
+        - $ref: '#/components/schemas/Application'
+        - type: object
+          required: [creator, matchScore]
+          properties:
+            creator: { $ref: '#/components/schemas/CreatorCard' }
+            matchScore: { type: integer, minimum: 0, maximum: 100 }
+    ApproveApplicationRequest:
+      type: object
+      properties:
+        agreedTotalPaise:
+          allOf: [{ $ref: '#/components/schemas/Paise' }]
+          description: Defaults to quotedTotalPaise. Brand may record a negotiated amount.
+    ApproveApplicationResponse:
+      type: object
+      required: [application, dealId]
+      properties:
+        application: { $ref: '#/components/schemas/Application' }
+        dealId: { type: string, format: uuid }
+
+    # ─────────── deal ───────────
+    DealSummary:
+      type: object
+      required: [id, status, campaignId, campaignTitle, brand, creator, compensationType, agreedTotalPaise, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/DealStatus' }
+        campaignId: { type: string, format: uuid }
+        campaignTitle: { type: string }
+        brand: { $ref: '#/components/schemas/BrandSummary' }
+        creator: { $ref: '#/components/schemas/UserRef' }
+        compensationType: { $ref: '#/components/schemas/CompensationType' }
+        agreedTotalPaise: { $ref: '#/components/schemas/Paise' }
+        productValuePaise: { $ref: '#/components/schemas/Paise' }
+        contentWindowEnd: { type: string, format: date }
+        nextAction: { type: string, description: 'Hint for UI, e.g. SUBMIT_CONTENT, REVIEW_SUBMISSION, MARK_PAID' }
+        createdAt: { type: string, format: date-time }
+    Deal:
+      allOf:
+        - $ref: '#/components/schemas/DealSummary'
+        - type: object
+          required: [deliverables, timeline, counterpartyContact, terms]
+          properties:
+            counterpartyContact: { $ref: '#/components/schemas/Contact' }
+            terms:
+              type: object
+              required: [deliverables, contentWindowStart, contentWindowEnd]
+              properties:
+                deliverables:
+                  type: array
+                  items: { $ref: '#/components/schemas/CampaignDeliverable' }
+                guidelines: { type: string }
+                hashtags:
+                  type: array
+                  items: { type: string }
+                mentions:
+                  type: array
+                  items: { type: string }
+                contentWindowStart: { type: string, format: date }
+                contentWindowEnd: { type: string, format: date }
+            shipment:
+              type: object
+              properties:
+                courier: { type: string }
+                trackingId: { type: string }
+                shippedAt: { type: string, format: date-time }
+                receivedAt: { type: string, format: date-time }
+            deliverables:
+              type: array
+              items: { $ref: '#/components/schemas/DealDeliverable' }
+            payment: { $ref: '#/components/schemas/PaymentRecord' }
+            myReview: { $ref: '#/components/schemas/Review' }
+            counterpartyReview: { $ref: '#/components/schemas/Review' }
+            cancelReason: { type: string }
+            timeline:
+              type: array
+              items: { $ref: '#/components/schemas/DealEvent' }
+    DealDeliverable:
+      type: object
+      required: [id, deliverableType, seq, status, revisionCount]
+      properties:
+        id: { type: string, format: uuid }
+        deliverableType: { $ref: '#/components/schemas/DeliverableType' }
+        seq: { type: integer }
+        status: { $ref: '#/components/schemas/DeliverableStatus' }
+        revisionCount: { type: integer }
+        latestSubmission: { $ref: '#/components/schemas/Submission' }
+    Submission:
+      type: object
+      required: [id, deliverableId, postUrl, disclosureConfirmed, reviewStatus, submittedAt]
+      properties:
+        id: { type: string, format: uuid }
+        deliverableId: { type: string, format: uuid }
+        postUrl: { type: string, format: uri }
+        screenshotFileIds:
+          type: array
+          items: { type: string, format: uuid }
+        notes: { type: string }
+        disclosureConfirmed: { type: boolean }
+        reviewStatus: { $ref: '#/components/schemas/SubmissionReviewStatus' }
+        reviewComment: { type: string }
+        submittedAt: { type: string, format: date-time }
+        reviewedAt: { type: string, format: date-time }
+    CreateSubmissionRequest:
+      type: object
+      required: [postUrl, disclosureConfirmed]
+      properties:
+        postUrl: { type: string, format: uri, maxLength: 500 }
+        screenshotFileIds:
+          type: array
+          maxItems: 5
+          items: { type: string, format: uuid }
+        notes: { type: string, maxLength: 1000 }
+        disclosureConfirmed:
+          type: boolean
+          description: Creator confirms ASCI disclosure (#ad / #collab / paid partnership label)
+    ProductShippedRequest:
+      type: object
+      properties:
+        courier: { type: string, maxLength: 60 }
+        trackingId: { type: string, maxLength: 60 }
+    MarkPaymentRequest:
+      type: object
+      required: [amountPaise, mode, paidOn]
+      properties:
+        amountPaise:
+          type: integer
+          format: int64
+          minimum: 100
+        mode: { $ref: '#/components/schemas/PaymentMode' }
+        reference: { type: string, maxLength: 100 }
+        paidOn: { type: string, format: date }
+    PaymentRecord:
+      type: object
+      required: [amountPaise, mode, paidOn, markedAt]
+      properties:
+        amountPaise: { $ref: '#/components/schemas/Paise' }
+        mode: { $ref: '#/components/schemas/PaymentMode' }
+        reference: { type: string }
+        paidOn: { type: string, format: date }
+        markedAt: { type: string, format: date-time }
+        confirmedAt: { type: string, format: date-time }
+    CreateReviewRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 1000 }
+    Review:
+      type: object
+      required: [id, rating, reviewer, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+        reviewer: { $ref: '#/components/schemas/UserRef' }
+        createdAt: { type: string, format: date-time }
+    RaiseDisputeRequest:
+      type: object
+      required: [reason, description]
+      properties:
+        reason: { $ref: '#/components/schemas/DisputeReason' }
+        description: { type: string, minLength: 20, maxLength: 2000 }
+    Dispute:
+      type: object
+      required: [id, dealId, reason, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        dealId: { type: string, format: uuid }
+        reason: { $ref: '#/components/schemas/DisputeReason' }
+        description: { type: string }
+        status:
+          type: string
+          enum: [OPEN, RESOLVED]
+        resolution: { type: string }
+        createdAt: { type: string, format: date-time }
+    DealEvent:
+      type: object
+      required: [type, occurredAt]
+      properties:
+        type: { type: string, description: 'e.g. DEAL_CREATED, PRODUCT_SHIPPED, SUBMISSION_CREATED' }
+        actor: { $ref: '#/components/schemas/UserRef' }
+        occurredAt: { type: string, format: date-time }
+        data:
+          type: object
+          additionalProperties: true
+    DealMessage:
+      type: object
+      required: [id, sender, body, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        sender: { $ref: '#/components/schemas/UserRef' }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+    SendMessageRequest:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 2000 }
+
+    # ─────────── notification ───────────
+    Notification:
+      type: object
+      required: [id, type, title, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/NotificationType' }
+        title: { type: string }
+        body: { type: string }
+        link: { type: string, description: Relative web path }
+        readAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    # ─────────── admin ───────────
+    AdminVerificationItem:
+      type: object
+      required: [id, status, submittedAt, creator]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/VerificationStatus' }
+        submittedAt: { type: string, format: date-time }
+        creator: { $ref: '#/components/schemas/CreatorCard' }
+    AdminVerificationDetail:
+      type: object
+      required: [verification, creator, socialAccounts, proofs]
+      properties:
+        verification: { $ref: '#/components/schemas/VerificationRequest' }
+        creator: { $ref: '#/components/schemas/CreatorProfile' }
+        socialAccounts:
+          type: array
+          items: { $ref: '#/components/schemas/SocialAccount' }
+        proofs:
+          type: array
+          items: { $ref: '#/components/schemas/FileUrl' }
+        note: { type: string }
+        history:
+          type: array
+          items: { $ref: '#/components/schemas/VerificationRequest' }
+    VerificationChecklist:
+      type: object
+      required: [handleMatches, followersWithinTolerance, insightsMatchHandle, engagementLooksReal, audienceMostlyIndia, contentSafe]
+      properties:
+        handleMatches: { type: boolean }
+        followersWithinTolerance: { type: boolean }
+        insightsMatchHandle: { type: boolean }
+        engagementLooksReal: { type: boolean }
+        audienceMostlyIndia: { type: boolean }
+        contentSafe: { type: boolean }
+    ApproveVerificationRequest:
+      type: object
+      required: [checklist]
+      properties:
+        checklist: { $ref: '#/components/schemas/VerificationChecklist' }
+        verifiedMetrics:
+          type: array
+          items:
+            type: object
+            required: [socialAccountId, followers, engagementRate]
+            properties:
+              socialAccountId: { type: string, format: uuid }
+              followers: { type: integer, minimum: 0 }
+              engagementRate: { type: number, minimum: 0 }
+    RejectVerificationRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 5, maxLength: 500 }
+        checklist: { $ref: '#/components/schemas/VerificationChecklist' }
+    AdminUser:
+      type: object
+      required: [id, email, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { $ref: '#/components/schemas/UserStatus' }
+        displayName: { type: string }
+        creatorStatus: { $ref: '#/components/schemas/CreatorStatus' }
+        lastLoginAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    RateTableRow:
+      type: object
+      required: [platform, deliverableType, tier, followersMin, basePaise]
+      properties:
+        platform: { $ref: '#/components/schemas/Platform' }
+        deliverableType: { $ref: '#/components/schemas/DeliverableType' }
+        tier: { $ref: '#/components/schemas/FollowerTier' }
+        followersMin: { type: integer, minimum: 0 }
+        followersMax: { type: integer, minimum: 0, description: Omitted for the open-ended top tier }
+        basePaise: { $ref: '#/components/schemas/PriceRange' }
+    PricingModifier:
+      type: object
+      required: [code, multiplier, active]
+      properties:
+        code: { type: string, description: 'e.g. ER_LT_1, ER_GT_8, NICHE_BEAUTY, BUNDLE_3_PLUS' }
+        multiplier: { type: number, minimum: 0 }
+        active: { type: boolean }
+        rule:
+          type: object
+          additionalProperties: true
+    RateTable:
+      type: object
+      required: [version, rows, modifiers, activatedAt]
+      properties:
+        version: { type: integer }
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/RateTableRow' }
+        modifiers:
+          type: array
+          items: { $ref: '#/components/schemas/PricingModifier' }
+        activatedAt: { type: string, format: date-time }
+    ReplaceRateTableRequest:
+      type: object
+      required: [rows, modifiers]
+      properties:
+        rows:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/RateTableRow' }
+        modifiers:
+          type: array
+          items: { $ref: '#/components/schemas/PricingModifier' }
+    AuditLog:
+      type: object
+      required: [id, action, entityType, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        actor: { $ref: '#/components/schemas/UserRef' }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: string, format: uuid }
+        before:
+          type: object
+          additionalProperties: true
+        after:
+          type: object
+          additionalProperties: true
+        createdAt: { type: string, format: date-time }
+    AdminMetrics:
+      type: object
+      required: [creators, verifiedCreators, pendingVerifications, brands, publishedCampaigns, applications, deals, completedDeals]
+      properties:
+        creators: { type: integer }
+        verifiedCreators: { type: integer }
+        pendingVerifications: { type: integer }
+        brands: { type: integer }
+        publishedCampaigns: { type: integer }
+        applications: { type: integer }
+        deals: { type: integer }
+        completedDeals: { type: integer }
+        declaredGmvPaise: { $ref: '#/components/schemas/Paise' }
+
+    # ─────────── pages ───────────
+    MyApplicationPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MyApplication' }
+        nextCursor: { type: string }
+    ApplicantPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Applicant' }
+        nextCursor: { type: string }
+    CreatorCardPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CreatorCard' }
+        nextCursor: { type: string }
+    CampaignSummaryPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CampaignSummary' }
+        nextCursor: { type: string }
+    CampaignFeedPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CampaignFeedItem' }
+        nextCursor: { type: string }
+    DealSummaryPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/DealSummary' }
+        nextCursor: { type: string }
+    DealMessagePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/DealMessage' }
+        nextCursor: { type: string }
+    NotificationPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Notification' }
+        nextCursor: { type: string }
+        unreadCount: { type: integer }
+    AdminVerificationPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminVerificationItem' }
+        nextCursor: { type: string }
+    AdminUserPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminUser' }
+        nextCursor: { type: string }
+    AuditLogPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AuditLog' }
+        nextCursor: { type: string }
