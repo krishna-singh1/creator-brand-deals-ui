@@ -26,7 +26,15 @@ npm run api:types       # regenerate src/lib/api/schema.d.ts
 
 ```bash
 npm run lint && npm run typecheck && npm run api:check && npm run build
-npm run e2e   # real-browser tests; needs the API (+ docker compose Postgres/Mailpit) running
+npm run e2e   # real-browser tests; needs the API (+ docker compose Postgres/Mailpit/S3) running
+```
+
+For e2e, start the API with a bootstrap admin and relaxed OTP limits (all test logins come from 127.0.0.1):
+
+```bash
+# in the API repo
+SPRING_PROFILES_ACTIVE=local ADMIN_EMAILS=admin@branddeal.local \
+APP_OTP_RESEND_AFTER=1s APP_OTP_MAX_PER_EMAIL_WINDOW=1000 APP_OTP_MAX_PER_IP_HOUR=100000 ./gradlew bootRun
 ```
 
 ## Deploy (Vercel)

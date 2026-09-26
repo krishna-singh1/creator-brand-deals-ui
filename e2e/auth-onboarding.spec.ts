@@ -1,29 +1,8 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+
+import { latestOtp, signIn } from "./helpers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
-const MAILPIT_URL = process.env.MAILPIT_URL ?? "http://localhost:8025";
-
-/** Reads the newest login code sent to `email` from Mailpit (local SMTP catcher). */
-async function latestOtp(email: string): Promise<string> {
-  for (let i = 0; i < 30; i++) {
-    const res = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`);
-    const body = (await res.json()) as { messages: { Subject: string }[] };
-    const match = body.messages.map((m) => /^(\d{6}) is your BrandDeal login code/.exec(m.Subject)).find(Boolean);
-    if (match) return match[1];
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error(`No OTP email for ${email}`);
-}
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Continue with email" }).click();
-  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
-  await page.getByLabel("Login code").fill(await latestOtp(email));
-  await page.getByRole("button", { name: "Verify and continue" }).click();
-}
-
 test("creator signs up with email OTP, onboards, and lands on the creator home", async ({ page }) => {
   const email = `e2e-creator-${Date.now()}@example.com`;
 
@@ -39,7 +18,7 @@ test("creator signs up with email OTP, onboards, and lands on the creator home",
   await accept.click();
 
   await expect(page).toHaveURL(/\/creator$/);
-  await expect(page.getByText("Next: complete your creator profile")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Complete your creator profile" })).toBeVisible();
 
   // Session survives a reload (httpOnly cookies set by the API on its own origin).
   await page.reload();
@@ -83,6 +62,6 @@ test("expired access token is refreshed transparently", async ({ page, context }
   expect(cookies.some((c) => c.name === "bd_rt" && c.domain.includes(apiHost))).toBe(true);
 
   await page.reload();
-  await expect(page.getByText("Next: set up your brand profile")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Complete your brand profile" })).toBeVisible();
   expect((await context.cookies()).some((c) => c.name === "bd_at")).toBe(true);
 });
