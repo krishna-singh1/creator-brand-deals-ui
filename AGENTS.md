@@ -15,6 +15,16 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 (`creator-brand-deals`: `docs/`, `contracts/openapi.yaml`). Don't duplicate them here. Link to them instead.
 
 ## Key rules
+- **Follow SOLID and DRY.**
+  - One responsibility per component or module: pages compose; data fetching lives in hooks/`src/lib`; UI
+    primitives live in `src/components/ui.tsx`; pure helpers (formatting, errors, uploads) live in `src/lib`.
+  - Extend through props and composition (e.g. `PasswordField`, `ImageUpload`, `ActionItems`) instead of copying
+    a component and tweaking it.
+  - Components depend on small typed props, not on whole API objects they don't use.
+  - One source of truth: API types come from the generated `schema.d.ts` (never hand-written copies), design
+    tokens from `globals.css`, user-facing error text from `src/lib/errors.ts`, money/date formatting from
+    `src/lib/format.ts`.
+  - Extract on the second real duplicate; keep it simple otherwise.
 - API access: always use the typed client in `src/lib/api/client.ts` (`api.GET/POST…` + `unwrap`). It sends
   `credentials: 'include'` and the `X-Requested-With: fetch` CSRF header, and refreshes once on a 401 (ADR 0008).
 - Never read or store auth tokens in JS. They are httpOnly cookies set by the API.
