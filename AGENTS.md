@@ -66,7 +66,8 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 - `src/app/login`, `src/app/onboarding`, `src/app/creator`, `src/app/brand`: screens per role
 - `src/lib/upload.ts`: presign → direct PUT to storage → fileId (ADR 0006)
 - `src/app/creator/profile`, `src/app/creator/verification`, `src/app/brand/profile`, `src/app/admin`: M2 screens
-- `src/app/brand/campaigns`, `src/app/creator/campaigns`: M3 campaign screens; shared pieces in
+- `src/app/brand/campaigns` (incl. `[id]/applicants`), `src/app/creator/campaigns` (incl. the apply panel),
+  `src/app/creator/applications`: M3–M4 screens; `src/components/notification-bell.tsx` in the app shell; shared pieces in
   `src/components/campaign-brief.tsx`, `src/components/campaign-bits.tsx` and `src/lib/campaigns.ts`
 - `e2e/`: Playwright specs against the running web + API (`helpers.ts`: UI sign-in/sign-up/OTP helpers;
   `api-fixtures.ts`: API-level setup such as a verified creator, for preconditions other specs cover via the UI)

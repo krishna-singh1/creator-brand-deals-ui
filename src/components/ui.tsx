@@ -139,6 +139,11 @@ const BADGE_STYLES: Record<string, string> = {
   PENDING: "bg-amber-50 text-amber-900 ring-amber-200",
   REJECTED: "bg-red-50 text-red-700 ring-red-200",
   SUSPENDED: "bg-red-50 text-red-700 ring-red-200",
+  PUBLISHED: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  APPLIED: "bg-amber-50 text-amber-900 ring-amber-200",
+  SHORTLISTED: "bg-gold/10 text-gold-deep ring-gold/40",
+  INVITED: "bg-gold/10 text-gold-deep ring-gold/40",
+  ACTIVE: "bg-emerald-50 text-emerald-800 ring-emerald-200",
 };
 
 export function StatusBadge({ status }: { status: string }) {

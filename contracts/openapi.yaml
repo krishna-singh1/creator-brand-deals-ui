@@ -1098,6 +1098,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ApplicantPage' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /campaigns/{campaignId}/invites:
@@ -1140,6 +1141,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Application' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
@@ -1158,6 +1160,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Application' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
@@ -1181,8 +1184,10 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Application' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
 
   /applications/{applicationId}/approve:
     post:
@@ -1205,8 +1210,10 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ApproveApplicationResponse' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
 
   /applications/{applicationId}/accept-invite:
     post:

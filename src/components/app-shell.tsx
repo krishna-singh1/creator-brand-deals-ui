@@ -8,6 +8,7 @@ import { api, type Me } from "@/lib/api/client";
 import { ME_KEY } from "@/lib/session";
 
 import { Logo } from "./logo";
+import { NotificationBell } from "./notification-bell";
 import { useScrolled } from "./motion";
 import { Button } from "./ui";
 
@@ -15,6 +16,7 @@ const NAV: Record<string, { href: string; label: string }[]> = {
   CREATOR: [
     { href: "/creator", label: "Home" },
     { href: "/creator/campaigns", label: "Campaigns" },
+    { href: "/creator/applications", label: "Applications" },
     { href: "/creator/profile", label: "Profile" },
     { href: "/creator/verification", label: "Verification" },
     { href: "/account", label: "Account" },
@@ -79,6 +81,7 @@ export function AppShell({ me, children }: { me: Me; children: React.ReactNode }
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm">
+            {me.role && me.role !== "ADMIN" && <NotificationBell />}
             <div className="hidden items-center gap-3 sm:flex">
               <div className="flex flex-col items-end leading-tight">
                 <span className="max-w-48 truncate text-ink">{me.displayName ?? me.email}</span>

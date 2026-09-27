@@ -87,10 +87,18 @@ function Detail({ id }: { id: string }) {
             </Button>
           </>
         )}
+        {c.status !== "DRAFT" && (
+          <Link
+            href={`/brand/campaigns/${c.id}/applicants`}
+            className="inline-flex h-11 items-center rounded-full bg-ink px-6 text-sm font-medium text-ivory shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift"
+          >
+            Review applicants ({c.applicationCount})
+          </Link>
+        )}
         {c.status === "PUBLISHED" && (
           <>
             <p className="text-sm text-zinc-600">
-              Live for verified creators · {c.applicationCount} applications · {c.approvedCount}/{c.creatorsNeeded} creators
+              Live for verified creators · {c.approvedCount}/{c.creatorsNeeded} creators approved
             </p>
             <Button
               variant="secondary"

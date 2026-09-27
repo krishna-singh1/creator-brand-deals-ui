@@ -8,10 +8,12 @@ import { AppShell } from "@/components/app-shell";
 import { CampaignBrief } from "@/components/campaign-brief";
 import { BrandLine, CompensationBadge, MatchScore } from "@/components/campaign-bits";
 import { ContentSkeleton, RequireSession } from "@/components/require-session";
-import { Button, Card, PageTitle, SectionTitle } from "@/components/ui";
+import { Card, PageTitle, SectionTitle } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
 import { formatDeadline } from "@/lib/campaigns";
 import { DELIVERABLE_LABELS, formatPaise } from "@/lib/format";
+
+import { ApplyPanel } from "./apply-panel";
 
 export default function CreatorCampaignPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -32,7 +34,7 @@ function Detail({ id }: { id: string }) {
     queryFn: () => unwrap(api.GET("/campaigns/{campaignId}/public", { params: { path: { campaignId: id } } })),
   });
   if (!data) return <ContentSkeleton />;
-  const { campaign: c, eligible, ineligibleReasons = [], matchScore, suggestedQuote, lowValueOffer } = data;
+  const { campaign: c, matchScore, suggestedQuote, lowValueOffer } = data;
   const total = suggestedQuote.reduce(
     (acc, l) => ({ min: acc.min + l.range.minPaise, max: acc.max + l.range.maxPaise }),
     { min: 0, max: 0 },
@@ -51,30 +53,8 @@ function Detail({ id }: { id: string }) {
         <CompensationBadge type={c.compensationType} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <Card className={eligible ? "border-emerald-200" : "border-amber-200"}>
-          {eligible ? (
-            <div className="flex flex-col gap-2">
-              <p className="font-display text-2xl text-ink">You&apos;re a fit for this brief</p>
-              <p className="text-sm text-zinc-600">Applications with a pitch and a quote open in the next release.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <p className="font-display text-2xl text-ink">Not eligible yet</p>
-              <ul className="flex flex-col gap-2 text-sm text-zinc-700">
-                {ineligibleReasons.map((r) => (
-                  <li key={r} className="flex items-start gap-2">
-                    <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500" />
-                    {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <Button className="mt-6" disabled title="Applications open in the next release">
-            Apply (coming soon)
-          </Button>
-        </Card>
+      <div className="grid items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <ApplyPanel data={data} />
 
         <Card>
           <SectionTitle

@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { createVerifiedCreator } from "./api-fixtures";
 import { signInWithPassword, signUp } from "./helpers";
 
-test("brand publishes a campaign; a verified creator finds it with a suggested quote", async ({ browser }) => {
+test("brand publishes a campaign; a verified creator applies; the brand approves into a deal", async ({ browser }) => {
   test.setTimeout(180_000); // multi-page flow; first visits compile pages in dev
   const title = `Monsoon chai ritual ${Date.now().toString(36)}`;
 
@@ -19,7 +19,7 @@ test("brand publishes a campaign; a verified creator finds it with a suggested q
   await brand.getByRole("button", { name: "Save profile" }).click();
   await expect(brand.getByText("Saved.")).toBeVisible();
 
-  await brand.getByRole("link", { name: "Campaigns" }).click();
+  await brand.getByRole("link", { name: "Campaigns", exact: true }).click();
   await brand.getByRole("link", { name: "New campaign" }).click();
   await brand.getByLabel("Campaign title").fill(title);
   await brand.getByLabel("Description").fill("Show how our masala chai kit turns a rainy evening into a ritual.");
@@ -41,7 +41,7 @@ test("brand publishes a campaign; a verified creator finds it with a suggested q
   const creator = await (await browser.newContext()).newPage();
   await signInWithPassword(creator, creatorEmail);
   await expect(creator).toHaveURL(/\/creator$/);
-  await creator.getByRole("link", { name: "Campaigns" }).click();
+  await creator.getByRole("link", { name: "Campaigns", exact: true }).click();
   await expect(creator.getByRole("heading", { name: "Briefs curated for you" })).toBeVisible();
 
   const card = creator.getByRole("link").filter({ hasText: title });
@@ -55,8 +55,37 @@ test("brand publishes a campaign; a verified creator finds it with a suggested q
   await card.click();
 
   await expect(creator.getByRole("heading", { name: title })).toBeVisible();
-  await expect(creator.getByText("You're a fit for this brief")).toBeVisible();
+  await expect(creator.getByText("Apply to this brief")).toBeVisible();
   // 18K followers, 4.11% ER → ₹3,000–₹7,000 per reel, ×2.
   await expect(creator.getByText("₹6,000–₹14,000").first()).toBeVisible();
-  await expect(creator.getByRole("button", { name: "Apply (coming soon)" })).toBeDisabled();
+
+  // ── Creator applies ──
+  await creator.getByLabel("Your pitch").fill(
+    "I bake and brew every monsoon evening; my Pune audience loves slow rituals. Two moody reels of the kit in use.",
+  );
+  await expect(creator.getByLabel(/Instagram Reel \(₹ each/)).toHaveValue("5000");
+  await creator.getByLabel(/Instagram Reel \(₹ each/).fill("4500");
+  await creator.getByLabel(/I can deliver within the content window/).check();
+  await creator.getByRole("button", { name: "Send application" }).click();
+  await expect(creator.getByText("Sent. The brand will review it soon.")).toBeVisible();
+  await creator.getByRole("link", { name: "Applications", exact: true }).click();
+  await expect(creator.getByRole("link").filter({ hasText: title })).toBeVisible();
+
+  // ── Brand is notified, reviews and approves ──
+  await brand.reload();
+  await expect(brand.getByRole("button", { name: /Notifications, \d+ unread/ })).toBeVisible({ timeout: 15_000 });
+  await brand.getByRole("button", { name: /Notifications/ }).click();
+  await brand.getByRole("button", { name: new RegExp(`New applicant for ${title}`) }).click();
+  await expect(brand).toHaveURL(/\/applicants$/);
+  const applicant = brand.getByText("Meera Bakes");
+  await expect(applicant).toBeVisible();
+  await expect(brand.getByText("₹9,000").first()).toBeVisible();
+  brand.once("dialog", (d) => d.accept());
+  await brand.getByRole("button", { name: "Approve" }).click();
+  await expect(brand.getByText("Deal created.")).toBeVisible();
+
+  // ── Creator sees the result ──
+  await creator.reload();
+  await expect(creator.getByText("Approved. Your deal is ready.")).toBeVisible();
+  await expect(creator.getByRole("button", { name: /Notifications, \d+ unread/ })).toBeVisible({ timeout: 15_000 });
 });
