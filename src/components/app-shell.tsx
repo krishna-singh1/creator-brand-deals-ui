@@ -14,12 +14,14 @@ import { Button } from "./ui";
 const NAV: Record<string, { href: string; label: string }[]> = {
   CREATOR: [
     { href: "/creator", label: "Home" },
+    { href: "/creator/campaigns", label: "Campaigns" },
     { href: "/creator/profile", label: "Profile" },
     { href: "/creator/verification", label: "Verification" },
     { href: "/account", label: "Account" },
   ],
   BRAND: [
     { href: "/brand", label: "Home" },
+    { href: "/brand/campaigns", label: "Campaigns" },
     { href: "/brand/profile", label: "Profile" },
     { href: "/account", label: "Account" },
   ],
@@ -60,7 +62,7 @@ export function AppShell({ me, children }: { me: Me; children: React.ReactNode }
             <Logo href={nav[0]?.href ?? "/"} />
             <nav className="hidden items-center gap-1 rounded-full border border-zinc-200 bg-white/60 p-1 text-sm md:flex">
               {nav.map((item) => {
-                const active = pathname === item.href;
+                const active = pathname === item.href || (item.href.split("/").length > 2 && pathname.startsWith(`${item.href}/`));
                 return (
                   <Link
                     key={item.href}

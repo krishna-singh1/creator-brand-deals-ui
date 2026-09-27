@@ -877,6 +877,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CampaignSummaryPage' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /campaigns/feed:
     get:
@@ -934,6 +935,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PriceRange' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/Unprocessable' }
         '501': { $ref: '#/components/responses/NotImplemented' }
 
@@ -951,6 +953,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Campaign' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [campaign]
@@ -971,6 +974,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Campaign' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
@@ -985,6 +989,7 @@ paths:
         '204':
           description: Deleted
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
@@ -1003,6 +1008,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Campaign' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
@@ -1022,6 +1028,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Campaign' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
@@ -2607,6 +2614,7 @@ components:
         ratingAvg: { type: number }
         dealsCompleted: { type: integer }
     CreatorPublicProfile:
+      unevaluatedProperties: false
       allOf:
         - $ref: '#/components/schemas/CreatorCard'
         - type: object
@@ -2762,6 +2770,7 @@ components:
         contentWindowStart: { type: string, format: date }
         contentWindowEnd: { type: string, format: date }
     Campaign:
+      unevaluatedProperties: false
       allOf:
         - $ref: '#/components/schemas/CampaignInput'
         - type: object
@@ -2797,6 +2806,7 @@ components:
         applyBy: { type: string, format: date }
         brand: { $ref: '#/components/schemas/BrandSummary' }
     CampaignFeedItem:
+      unevaluatedProperties: false
       allOf:
         - $ref: '#/components/schemas/CampaignSummary'
         - type: object
@@ -2895,6 +2905,7 @@ components:
         createdAt: { type: string, format: date-time }
         decidedAt: { type: string, format: date-time }
     MyApplication:
+      unevaluatedProperties: false
       allOf:
         - $ref: '#/components/schemas/Application'
         - type: object
@@ -2902,6 +2913,7 @@ components:
           properties:
             campaign: { $ref: '#/components/schemas/CampaignSummary' }
     Applicant:
+      unevaluatedProperties: false
       allOf:
         - $ref: '#/components/schemas/Application'
         - type: object
@@ -2940,6 +2952,7 @@ components:
         nextAction: { type: string, description: 'Hint for UI, e.g. SUBMIT_CONTENT, REVIEW_SUBMISSION, MARK_PAID' }
         createdAt: { type: string, format: date-time }
     Deal:
+      unevaluatedProperties: false
       allOf:
         - $ref: '#/components/schemas/DealSummary'
         - type: object

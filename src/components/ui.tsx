@@ -38,18 +38,23 @@ export function Button({
   );
 }
 
-const fieldClass = `w-full rounded-xl border border-zinc-300 bg-white/80 px-4 text-base text-ink shadow-[inset_0_1px_2px_rgb(18_18_18/0.04)] outline-none transition-all duration-300 ${EASE} placeholder:text-zinc-400 hover:border-zinc-400 focus:border-gold focus:bg-white focus:shadow-[0_0_0_4px_rgb(176_141_87/0.15)] disabled:opacity-60`;
+const fieldClass = `rounded-xl border border-zinc-300 bg-white/80 px-4 text-base text-ink shadow-[inset_0_1px_2px_rgb(18_18_18/0.04)] outline-none transition-all duration-300 ${EASE} placeholder:text-zinc-400 hover:border-zinc-400 focus:border-gold focus:bg-white focus:shadow-[0_0_0_4px_rgb(176_141_87/0.15)] disabled:opacity-60`;
+
+/** Fields fill their container unless the caller sets a width (e.g. `w-44` for a filter). */
+function widthOf(className: string) {
+  return /(^|\s)(w-|max-w-)/.test(className) ? "" : "w-full";
+}
 
 export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={`h-12 ${fieldClass} ${className}`} {...props} />;
+  return <input className={`h-12 ${widthOf(className)} ${fieldClass} ${className}`} {...props} />;
 }
 
 export function Select({ className = "", ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={`h-12 cursor-pointer ${fieldClass} ${className}`} {...props} />;
+  return <select className={`h-12 cursor-pointer ${widthOf(className)} ${fieldClass} ${className}`} {...props} />;
 }
 
 export function Textarea({ className = "", ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={`min-h-28 py-3 ${fieldClass} ${className}`} {...props} />;
+  return <textarea className={`min-h-28 py-3 ${widthOf(className)} ${fieldClass} ${className}`} {...props} />;
 }
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {

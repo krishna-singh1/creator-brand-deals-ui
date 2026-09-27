@@ -14,7 +14,7 @@ export type ApiError = components["schemas"]["ErrorResponse"]["error"];
 export type Me = components["schemas"]["Me"];
 
 const CSRF_HEADER = { "X-Requested-With": "fetch" } as const;
-const NO_REFRESH_PATHS = ["/auth/refresh", "/auth/logout", "/auth/otp/", "/auth/google"];
+const NO_REFRESH_PATHS = ["/auth/refresh", "/auth/logout", "/auth/otp/", "/auth/google", "/auth/login", "/auth/password/"];
 
 let refreshInFlight: Promise<boolean> | null = null;
 
