@@ -1,12 +1,13 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { PasswordField } from "@/components/password-input";
 import { RequireSession } from "@/components/require-session";
-import { Button, Card, ErrorText, PageTitle, SectionTitle, Spinner, SuccessText } from "@/components/ui";
+import { Button, Card, ErrorText, Input, PageTitle, SectionTitle, Spinner, SuccessText } from "@/components/ui";
 import { api, type Me, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
 import { useSetMe } from "@/lib/session";
@@ -19,6 +20,7 @@ export default function AccountPage() {
           <div className="flex max-w-2xl flex-col gap-10">
             <PageTitle eyebrow="Account" title="Sign-in & security" subtitle={`Signed in as ${me.email}`} />
             <PasswordCard key={String(me.hasPassword)} me={me} />
+            <DeleteAccountCard />
           </div>
         </AppShell>
       )}
@@ -102,6 +104,44 @@ function PasswordCard({ me }: { me: Me }) {
           <SuccessText>{save.isSuccess && "Password saved. Other devices have been signed out."}</SuccessText>
           <ErrorText>{(mismatch && "Passwords don't match.") || (save.isError && errorMessage(save.error))}</ErrorText>
         </div>
+      </form>
+    </Card>
+  );
+}
+
+/** DPDP deletion. The API refuses while deals are active and explains why; the message is shown as-is. */
+function DeleteAccountCard() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [confirm, setConfirm] = useState("");
+  const remove = useMutation({
+    mutationFn: () => unwrap(api.DELETE("/me")),
+    onSuccess: () => {
+      queryClient.clear();
+      router.replace("/login?deleted=1");
+    },
+  });
+  return (
+    <Card tone="danger">
+      <SectionTitle
+        title="Delete account"
+        subtitle="Your profile, contact details, photos and verification documents are erased. Completed deals stay on record for the other party, shown under a deleted name. This can't be undone."
+      />
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          remove.mutate();
+        }}
+      >
+        <label className="flex flex-col gap-2 text-sm text-zinc-700">
+          Type DELETE to confirm
+          <Input className="max-w-xs" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" />
+        </label>
+        <ErrorText>{remove.isError && errorMessage(remove.error)}</ErrorText>
+        <Button type="submit" variant="danger" className="self-start" disabled={confirm !== "DELETE" || remove.isPending}>
+          {remove.isPending ? "Deleting…" : "Delete my account"}
+        </Button>
       </form>
     </Card>
   );

@@ -4,12 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 
-import { AppShell } from "@/components/app-shell";
-import { ContentSkeleton, RequireSession } from "@/components/require-session";
+import { ContentSkeleton } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, Input, SectionTitle, StatusBadge, Textarea } from "@/components/ui";
 import { api, type components, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
 import { formatCount, formatDateTime } from "@/lib/format";
+
+import { AdminShell } from "../../admin-shell";
 
 type Checklist = components["schemas"]["VerificationChecklist"];
 
@@ -24,13 +25,9 @@ const CHECKS: { key: keyof Checklist; label: string }[] = [
 
 export function Review({ id }: { id: string }) {
   return (
-    <RequireSession role="ADMIN">
-      {(me) => (
-        <AppShell me={me}>
-          <ReviewBody id={id} />
-        </AppShell>
-      )}
-    </RequireSession>
+    <AdminShell>
+      <ReviewBody id={id} />
+    </AdminShell>
   );
 }
 
@@ -86,7 +83,7 @@ function ReviewBody({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/admin" className="text-sm text-zinc-500 hover:text-zinc-900">
+      <Link href="/admin/verifications" className="text-sm text-zinc-500 hover:text-zinc-900">
         ← Queue
       </Link>
       <div className="flex items-center gap-3">

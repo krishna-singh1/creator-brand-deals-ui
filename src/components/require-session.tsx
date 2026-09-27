@@ -46,6 +46,13 @@ export function RequireSession({
   if (isPending || redirect || !me) {
     return <PageSkeleton />;
   }
+  if (me.status === "SUSPENDED") {
+    return (
+      <CenteredMessage>
+        This account is suspended. If you think this is a mistake, contact support@branddeal.in.
+      </CenteredMessage>
+    );
+  }
   return <>{children(me)}</>;
 }
 

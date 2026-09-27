@@ -29,6 +29,8 @@ const EVENT_LABELS: Record<string, string> = {
   COMPLETED: "Deal completed",
   CANCELLED: "Deal cancelled",
   REVIEW_SUBMITTED: "Rating left",
+  REMINDER_CONTENT_DUE: "Reminder sent: content due soon",
+  REMINDER_PAYMENT_PENDING: "Reminder sent: payment pending",
 };
 
 export default function DealPage({ params }: { params: Promise<{ id: string }> }) {

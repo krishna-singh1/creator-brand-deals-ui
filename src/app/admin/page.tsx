@@ -1,91 +1,74 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
 
-import { AppShell } from "@/components/app-shell";
-import { RequireSession } from "@/components/require-session";
-import { Button, Card, Select, StatusBadge } from "@/components/ui";
-import { api, type components, unwrap } from "@/lib/api/client";
-import { formatCount, formatDateTime } from "@/lib/format";
+import { Reveal } from "@/components/motion";
+import { Card, PageTitle, Skeleton } from "@/components/ui";
+import { api, unwrap } from "@/lib/api/client";
+import { formatCount, formatPaise } from "@/lib/format";
 
-type Status = components["schemas"]["VerificationStatus"];
+import { AdminShell } from "./admin-shell";
 
-export default function AdminHome() {
+export default function AdminOverviewPage() {
   return (
-    <RequireSession role="ADMIN">
-      {(me) => (
-        <AppShell me={me}>
-          <Queue />
-        </AppShell>
-      )}
-    </RequireSession>
+    <AdminShell>
+      <Overview />
+    </AdminShell>
   );
 }
 
-function Queue() {
-  const [status, setStatus] = useState<Status>("PENDING");
-  const query = useInfiniteQuery({
-    queryKey: ["admin", "verifications", status],
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      unwrap(api.GET("/admin/verifications", { params: { query: { status, cursor: pageParam, limit: 20 } } })),
-    getNextPageParam: (last) => last.nextCursor,
-  });
-  const items = query.data?.pages.flatMap((p) => p.items) ?? [];
+function Overview() {
+  const { data: m } = useQuery({ queryKey: ["admin", "metrics"], queryFn: () => unwrap(api.GET("/admin/metrics")) });
+  const tiles = m
+    ? [
+        { label: "Creators", value: formatCount(m.creators), hint: `${formatCount(m.verifiedCreators)} verified` },
+        {
+          label: "Pending verifications",
+          value: formatCount(m.pendingVerifications),
+          href: "/admin/verifications",
+          highlight: m.pendingVerifications > 0,
+        },
+        { label: "Brands", value: formatCount(m.brands) },
+        { label: "Live campaigns", value: formatCount(m.publishedCampaigns), href: "/admin/campaigns" },
+        { label: "Applications", value: formatCount(m.applications) },
+        { label: "Deals", value: formatCount(m.deals), hint: `${formatCount(m.completedDeals)} completed`, href: "/admin/deals" },
+        { label: "Declared payments", value: formatPaise(m.declaredGmvPaise ?? 0), hint: "Paid off-platform, recorded by brands" },
+      ]
+    : [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-4xl tracking-tight text-ink">Creator verifications</h1>
-        <Select className="w-44" value={status} onChange={(e) => setStatus(e.target.value as Status)}>
-          <option value="PENDING">Pending (oldest first)</option>
-          <option value="APPROVED">Approved</option>
-          <option value="REJECTED">Rejected</option>
-        </Select>
-      </div>
-      <Card className="p-0">
-        {items.length === 0 ? (
-          <p className="p-6 text-sm text-zinc-500">{query.isPending ? "Loading…" : "Nothing here."}</p>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 text-zinc-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Creator</th>
-                <th className="px-4 py-3 font-medium">Account</th>
-                <th className="px-4 py-3 font-medium">Followers</th>
-                <th className="px-4 py-3 font-medium">ER</th>
-                <th className="px-4 py-3 font-medium">Submitted</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((v) => (
-                <tr key={v.id} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50">
-                  <td className="px-4 py-3">
-                    <Link href={`/admin/verifications/${v.id}`} className="link-underline font-medium text-ink">
-                      {v.creator.displayName}
-                    </Link>
-                    {v.creator.city && <span className="text-zinc-500"> · {v.creator.city}</span>}
-                  </td>
-                  <td className="px-4 py-3">{v.creator.handle}</td>
-                  <td className="px-4 py-3">{formatCount(v.creator.followers)}</td>
-                  <td className="px-4 py-3">{v.creator.engagementRate}%</td>
-                  <td className="px-4 py-3">{formatDateTime(v.submittedAt)}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={v.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
-      {query.hasNextPage && (
-        <Button variant="secondary" disabled={query.isFetchingNextPage} onClick={() => query.fetchNextPage()}>
-          Load more
-        </Button>
+    <div className="flex flex-col gap-10">
+      <PageTitle eyebrow="Admin" title="Marketplace at a glance" subtitle="Live counts across creators, brands, campaigns and deals." />
+      {!m ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }, (_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {tiles.map((t, i) => {
+            const body = (
+              <Card interactive={!!t.href} tone={t.highlight ? "highlight" : "default"} className="flex h-full flex-col gap-2 p-6">
+                <span className="text-xs uppercase tracking-[0.16em] text-zinc-500">{t.label}</span>
+                <span className="font-display text-4xl tracking-tight text-ink">{t.value}</span>
+                {t.hint && <span className="text-sm text-zinc-600">{t.hint}</span>}
+              </Card>
+            );
+            return (
+              <Reveal key={t.label} delay={i * 50}>
+                {t.href ? (
+                  <Link href={t.href} className="block h-full">
+                    {body}
+                  </Link>
+                ) : (
+                  body
+                )}
+              </Reveal>
+            );
+          })}
+        </div>
       )}
     </div>
   );

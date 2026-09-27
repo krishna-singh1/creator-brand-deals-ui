@@ -48,8 +48,8 @@ test("creator completes profile, submits proofs, admin approves, creator is veri
 
   // ── Admin ──
   const admin = await (await browser.newContext({ storageState: ADMIN_STATE })).newPage();
-  await admin.goto("/admin");
-  await expect(admin).toHaveURL(/\/admin$/);
+  await admin.goto("/admin/verifications");
+  await expect(admin).toHaveURL(/\/admin\/verifications$/);
   let row = admin.getByRole("link", { name: "Riya Eats" }).last();
   for (let i = 0; i < 10 && !(await row.isVisible()); i++) {
     const more = admin.getByRole("button", { name: "Load more" });

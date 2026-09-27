@@ -148,6 +148,11 @@ export function LoginForm() {
           <Eyebrow>{h.eyebrow}</Eyebrow>
           <h1 className="font-display text-4xl leading-tight tracking-tight text-ink sm:text-5xl">{h.title}</h1>
           <p className="text-[15px] leading-relaxed text-zinc-600">{h.body}</p>
+          {params.get("deleted") === "1" && mode === "password" && (
+            <p role="status" className="rounded-2xl bg-cream px-4 py-3 text-sm text-zinc-700">
+              Your account and personal data have been deleted.
+            </p>
+          )}
         </div>
 
         {mode === "password" && (
