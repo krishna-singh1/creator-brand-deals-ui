@@ -89,10 +89,29 @@ export function SuccessText({ children }: { children?: ReactNode }) {
   );
 }
 
-export function Card({ className = "", interactive = false, children }: { className?: string; interactive?: boolean; children: ReactNode }) {
+const CARD_TONES = {
+  default: "border-zinc-200/80 bg-white/80",
+  highlight: "border-gold/40 bg-[#fbf6ec]",
+  success: "border-emerald-200 bg-white/80",
+  warning: "border-amber-200 bg-white/80",
+  danger: "border-red-200 bg-white/80",
+} as const;
+
+export function Card({
+  className = "",
+  interactive = false,
+  tone = "default",
+  children,
+}: {
+  className?: string;
+  interactive?: boolean;
+  /** Border/background emphasis; set it here rather than via className so it isn't overridden. */
+  tone?: keyof typeof CARD_TONES;
+  children: ReactNode;
+}) {
   return (
     <div
-      className={`rounded-3xl border border-zinc-200/80 bg-white/80 p-7 shadow-soft backdrop-blur-sm transition-all duration-500 ${EASE} ${
+      className={`rounded-3xl border p-7 shadow-soft backdrop-blur-sm transition-all duration-500 ${EASE} ${CARD_TONES[tone]} ${
         interactive ? "hover:-translate-y-1 hover:border-gold/40 hover:shadow-lift" : ""
       } ${className}`}
     >

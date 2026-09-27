@@ -43,6 +43,7 @@ test("brand publishes a campaign; a verified creator applies; the brand approves
   await expect(creator).toHaveURL(/\/creator$/);
   await creator.getByRole("link", { name: "Campaigns", exact: true }).click();
   await expect(creator.getByRole("heading", { name: "Briefs curated for you" })).toBeVisible();
+  await creator.getByLabel("Sort").selectOption("NEWEST");
 
   const card = creator.getByRole("link").filter({ hasText: title });
   for (let i = 0; i < 10 && !(await card.isVisible()); i++) {
@@ -82,10 +83,15 @@ test("brand publishes a campaign; a verified creator applies; the brand approves
   await expect(brand.getByText("₹9,000").first()).toBeVisible();
   brand.once("dialog", (d) => d.accept());
   await brand.getByRole("button", { name: "Approve" }).click();
-  await expect(brand.getByText("Deal created.")).toBeVisible();
+  await brand.getByRole("link", { name: /Open deal/ }).click();
+  await expect(brand).toHaveURL(/\/deals\/[0-9a-f-]+$/);
+  await expect(brand.getByText("The creator is working on it")).toBeVisible();
 
   // ── Creator sees the result ──
   await creator.reload();
   await expect(creator.getByText("Approved. Your deal is ready.")).toBeVisible();
+  await creator.getByRole("link", { name: "Deals", exact: true }).click();
+  await creator.getByRole("link").filter({ hasText: title }).click();
+  await expect(creator.getByText("Time to create")).toBeVisible();
   await expect(creator.getByRole("button", { name: /Notifications, \d+ unread/ })).toBeVisible({ timeout: 15_000 });
 });

@@ -17,6 +17,7 @@ const NAV: Record<string, { href: string; label: string }[]> = {
     { href: "/creator", label: "Home" },
     { href: "/creator/campaigns", label: "Campaigns" },
     { href: "/creator/applications", label: "Applications" },
+    { href: "/deals", label: "Deals" },
     { href: "/creator/profile", label: "Profile" },
     { href: "/creator/verification", label: "Verification" },
     { href: "/account", label: "Account" },
@@ -24,6 +25,7 @@ const NAV: Record<string, { href: string; label: string }[]> = {
   BRAND: [
     { href: "/brand", label: "Home" },
     { href: "/brand/campaigns", label: "Campaigns" },
+    { href: "/deals", label: "Deals" },
     { href: "/brand/profile", label: "Profile" },
     { href: "/account", label: "Account" },
   ],
@@ -60,7 +62,7 @@ export function AppShell({ me, children }: { me: Me; children: React.ReactNode }
         }`}
       >
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-6 px-6">
-          <div className="flex items-center gap-10">
+          <div className="flex items-center gap-6 lg:gap-10">
             <Logo href={nav[0]?.href ?? "/"} />
             <nav className="hidden items-center gap-1 rounded-full border border-zinc-200 bg-white/60 p-1 text-sm md:flex">
               {nav.map((item) => {
@@ -70,7 +72,7 @@ export function AppShell({ me, children }: { me: Me; children: React.ReactNode }
                     key={item.href}
                     href={item.href}
                     aria-current={active ? "page" : undefined}
-                    className={`relative rounded-full px-4 py-1.5 transition-colors duration-300 ${
+                    className={`relative whitespace-nowrap rounded-full px-3 py-1.5 transition-colors duration-300 lg:px-4 ${
                       active ? "bg-ink text-ivory shadow-soft" : "text-zinc-600 hover:text-ink"
                     }`}
                   >
@@ -83,7 +85,7 @@ export function AppShell({ me, children }: { me: Me; children: React.ReactNode }
           <div className="flex items-center gap-3 text-sm">
             {me.role && me.role !== "ADMIN" && <NotificationBell />}
             <div className="hidden items-center gap-3 sm:flex">
-              <div className="flex flex-col items-end leading-tight">
+              <div className="hidden flex-col items-end leading-tight xl:flex">
                 <span className="max-w-48 truncate text-ink">{me.displayName ?? me.email}</span>
                 <span className="text-[11px] uppercase tracking-[0.18em] text-gold-deep">{ROLE_LABEL[me.role ?? ""] ?? "Member"}</span>
               </div>
@@ -96,7 +98,7 @@ export function AppShell({ me, children }: { me: Me; children: React.ReactNode }
                 </span>
               )}
             </div>
-            <Button variant="secondary" className="h-9 px-4" disabled={logout.isPending} onClick={() => logout.mutate()}>
+            <Button variant="secondary" className="h-9 whitespace-nowrap px-4" disabled={logout.isPending} onClick={() => logout.mutate()}>
               Sign out
             </Button>
           </div>

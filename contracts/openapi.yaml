@@ -1279,6 +1279,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DealSummaryPage' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /deals/{dealId}:
     get:
@@ -1294,6 +1295,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Deal' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /deals/{dealId}/product-shipped:
@@ -1316,8 +1318,10 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Deal' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
 
   /deals/{dealId}/product-received:
     post:
@@ -1334,6 +1338,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Deal' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
@@ -1361,6 +1366,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Submission' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
@@ -1380,6 +1386,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Submission' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
@@ -1403,6 +1410,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Submission' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
@@ -1427,6 +1435,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Deal' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
@@ -1446,6 +1455,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Deal' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
@@ -1469,6 +1479,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Deal' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
@@ -1518,6 +1529,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Review' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }

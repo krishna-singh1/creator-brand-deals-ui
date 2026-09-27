@@ -1,9 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-import { finishOnboarding, PNG, signIn, signUp } from "./helpers";
-
-/** Admin email configured on the local API via ADMIN_EMAILS (see README). */
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@branddeal.local";
+import { ADMIN_STATE } from "./api-fixtures";
+import { PNG, signUp } from "./helpers";
 
 test("creator completes profile, submits proofs, admin approves, creator is verified", async ({ browser }) => {
   test.setTimeout(180_000); // long multi-page flow; first visits compile pages in dev
@@ -49,9 +47,8 @@ test("creator completes profile, submits proofs, admin approves, creator is veri
   await expect(creator.getByText("Our team usually reviews within 48 hours")).toBeVisible();
 
   // ── Admin ──
-  const admin = await (await browser.newContext()).newPage();
-  await signIn(admin, ADMIN_EMAIL);
-  await finishOnboarding(admin);
+  const admin = await (await browser.newContext({ storageState: ADMIN_STATE })).newPage();
+  await admin.goto("/admin");
   await expect(admin).toHaveURL(/\/admin$/);
   let row = admin.getByRole("link", { name: "Riya Eats" }).last();
   for (let i = 0; i < 10 && !(await row.isVisible()); i++) {

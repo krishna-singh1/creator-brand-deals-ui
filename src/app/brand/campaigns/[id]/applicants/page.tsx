@@ -186,7 +186,11 @@ function ApplicantCard({ applicant: a, campaignId }: { applicant: Applicant; cam
       </div>
 
       {a.decisionReason && <p className="text-sm text-zinc-600">Your note: {a.decisionReason}</p>}
-      {a.status === "APPROVED" && <p className="text-sm text-emerald-800">Deal created. Deal pages arrive in the next release.</p>}
+      {a.status === "APPROVED" && a.dealId && (
+        <Link href={`/deals/${a.dealId}`} className="link-underline self-start text-sm font-medium text-emerald-800">
+          Deal created · Open deal →
+        </Link>
+      )}
 
       {isOpen(a.status) && (
         <div className="flex flex-wrap items-center gap-3">

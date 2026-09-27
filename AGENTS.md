@@ -67,10 +67,11 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 - `src/lib/upload.ts`: presign → direct PUT to storage → fileId (ADR 0006)
 - `src/app/creator/profile`, `src/app/creator/verification`, `src/app/brand/profile`, `src/app/admin`: M2 screens
 - `src/app/brand/campaigns` (incl. `[id]/applicants`), `src/app/creator/campaigns` (incl. the apply panel),
-  `src/app/creator/applications`: M3–M4 screens; `src/components/notification-bell.tsx` in the app shell; shared pieces in
+  `src/app/creator/applications`, `src/app/deals` (shared by both roles): M3–M5 screens; `src/components/notification-bell.tsx` in the app shell; shared pieces in
   `src/components/campaign-brief.tsx`, `src/components/campaign-bits.tsx` and `src/lib/campaigns.ts`
 - `e2e/`: Playwright specs against the running web + API (`helpers.ts`: UI sign-in/sign-up/OTP helpers;
-  `api-fixtures.ts`: API-level setup such as a verified creator, for preconditions other specs cover via the UI)
+  `api-fixtures.ts`: API-level setup such as a verified creator or an approved deal; `global-setup.ts` signs the
+  bootstrap admin in once per run (email code) and saves `e2e/.auth/admin.json` for specs to reuse)
 
 ## Git
 - Commit author `krishna-singh1` (repo-local config). Short action-only messages. No co-author trailers.

@@ -24,7 +24,32 @@ export async function apiSession(email: string, password = TEST_PASSWORD): Promi
   return api;
 }
 
-async function acceptPendingConsents(api: APIRequestContext) {
+/** Admin session saved once per run by global-setup.ts (no parallel admin sign-ins). */
+export const ADMIN_STATE = "e2e/.auth/admin.json";
+
+async function adminSession(): Promise<APIRequestContext> {
+  return request.newContext({
+    baseURL: `${API_URL}/`,
+    extraHTTPHeaders: { "X-Requested-With": "fetch" },
+    storageState: ADMIN_STATE,
+  });
+}
+
+/** Signs in with an email code (never tries or changes a password); retries on the resend cooldown. */
+export async function signInWithCode(api: APIRequestContext, email: string) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const requestedAt = new Date();
+    const request = await api.post("auth/otp/request", { data: { email } });
+    if (request.ok()) {
+      const verify = await api.post("auth/otp/verify", { data: { email, otp: await latestOtp(email, requestedAt) } });
+      if (verify.ok()) return;
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error(`Could not sign in ${email} with an email code`);
+}
+
+export async function acceptPendingConsents(api: APIRequestContext) {
   const me = await (await api.get("auth/me")).json();
   const pending = me.onboarding.pendingConsents ?? [];
   if (pending.length > 0) {
@@ -72,8 +97,7 @@ export async function createVerifiedCreator(displayName: string): Promise<string
   expect(submitted.ok(), await submitted.text()).toBe(true);
   const verificationId = (await submitted.json()).id;
 
-  const admin = await apiSession(ADMIN_EMAIL);
-  await acceptPendingConsents(admin);
+  const admin = await adminSession();
   const checklist = {
     handleMatches: true,
     followersWithinTolerance: true,
@@ -87,4 +111,63 @@ export async function createVerifiedCreator(displayName: string): Promise<string
 
   await Promise.all([creator.dispose(), admin.dispose()]);
   return email;
+}
+
+/**
+ * A cash deal ready for content: a brand with a complete profile publishes a 1-reel campaign, a verified creator
+ * applies quoting ₹5,000 and the brand approves. Sign in to both with TEST_PASSWORD.
+ */
+export async function createApprovedDeal(title: string) {
+  const brandEmail = `e2e-db-${Date.now()}-${Math.floor(Math.random() * 1e4)}@example.com`;
+  const brand = await apiSession(brandEmail);
+  expect((await brand.post("me/role", { data: { role: "BRAND" } })).ok()).toBe(true);
+  await acceptPendingConsents(brand);
+  const profile = await brand.put("brand/profile", {
+    data: {
+      brandName: "Saffron & Co",
+      categoryId: "01920000-0000-7000-8000-000000000003",
+      contactName: "Nisha Rao",
+      contactPhone: "+919812300009",
+      contactEmail: brandEmail,
+    },
+  });
+  expect(profile.ok(), await profile.text()).toBe(true);
+  const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  const campaign = await (
+    await brand.post("campaigns", {
+      data: {
+        title,
+        description: "Film our saffron milk kit at your evening routine; warm, honest, unhurried.",
+        platform: "INSTAGRAM",
+        categoryIds: ["01920000-0000-7000-8000-000000000003"],
+        compensationType: "CASH",
+        budgetMinPaise: 400000,
+        budgetMaxPaise: 800000,
+        deliverables: [{ deliverableType: "IG_REEL", quantity: 1 }],
+        criteria: { followersMin: 10000, followersMax: 50000 },
+        creatorsNeeded: 3,
+        hashtags: ["#SaffronEvenings"],
+        applyBy: inDays(7),
+        contentWindowStart: inDays(8),
+        contentWindowEnd: inDays(20),
+      },
+    })
+  ).json();
+  expect((await brand.post(`campaigns/${campaign.id}/publish`)).ok()).toBe(true);
+
+  const creatorEmail = await createVerifiedCreator("Kavya Creates");
+  const creator = await apiSession(creatorEmail);
+  const application = await creator.post(`campaigns/${campaign.id}/applications`, {
+    data: {
+      pitch: "Evening rituals are my whole feed; my audience asks about my milk recipes every week. One cosy reel.",
+      quote: [{ deliverableType: "IG_REEL", quantity: 1, unitPricePaise: 500000 }],
+      availabilityConfirmed: true,
+    },
+  });
+  expect(application.ok(), await application.text()).toBe(true);
+  const approved = await brand.post(`applications/${(await application.json()).id}/approve`, { data: {} });
+  expect(approved.ok(), await approved.text()).toBe(true);
+  const dealId: string = (await approved.json()).dealId;
+  await Promise.all([brand.dispose(), creator.dispose()]);
+  return { brandEmail, creatorEmail, dealId };
 }

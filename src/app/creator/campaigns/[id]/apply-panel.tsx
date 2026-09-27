@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useState } from "react";
 
 import { Button, Card, ErrorText, Field, Input, Spinner, StatusBadge, Textarea } from "@/components/ui";
@@ -27,7 +28,7 @@ export function ApplyPanel({ data }: { data: CampaignForCreator }) {
   }
   if (!data.eligible) {
     return (
-      <Card className="border-amber-200">
+      <Card tone="warning">
         <p className="font-display text-2xl text-ink">Not eligible yet</p>
         <ul className="mt-3 flex flex-col gap-2 text-sm text-zinc-700">
           {(data.ineligibleReasons ?? []).map((r) => (
@@ -75,7 +76,7 @@ function ApplyForm({ data, onApplied }: { data: CampaignForCreator; onApplied: (
   });
 
   return (
-    <Card className="border-emerald-200">
+    <Card tone="success">
       <form
         className="flex flex-col gap-5"
         onSubmit={(e) => {
@@ -140,13 +141,18 @@ function ApplicationStatusCard({ application: a, onChange }: { application: Appl
     onSuccess: onChange,
   });
   return (
-    <Card className={a.status === "APPROVED" ? "border-emerald-200" : ""}>
+    <Card tone={a.status === "APPROVED" ? "success" : "default"}>
       <div className="flex items-center justify-between gap-3">
         <p className="font-display text-2xl text-ink">Your application</p>
         <StatusBadge status={a.status} />
       </div>
       <p className="mt-2 text-sm text-zinc-600">{STATUS_COPY[a.status]}</p>
       {a.decisionReason && <p className="mt-2 text-sm text-zinc-700">Brand&apos;s note: {a.decisionReason}</p>}
+      {a.dealId && (
+        <Link href={`/deals/${a.dealId}`} className="link-underline mt-3 inline-block text-sm font-medium text-emerald-800">
+          Open your deal →
+        </Link>
+      )}
       <p className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-3 text-sm">
         <span className="text-zinc-600">Your quote</span>
         <span className="font-display text-xl text-ink">{formatPaise(a.quotedTotalPaise)}</span>
