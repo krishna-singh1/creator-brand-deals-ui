@@ -44,6 +44,12 @@ export async function signIn(page: Page, email: string) {
   await page.getByRole("button", { name: "Verify and continue" }).click();
 }
 
+/** Signs out and waits until the session is gone (navigating away earlier would cancel the logout request). */
+export async function signOut(page: Page) {
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login/);
+}
+
 export async function signInWithPassword(page: Page, email: string, password = TEST_PASSWORD) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);

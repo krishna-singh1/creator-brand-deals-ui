@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { createPassword, latestOtp, signIn } from "./helpers";
+import { createPassword, latestOtp, signIn, signOut } from "./helpers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
 test("creator signs up with email OTP, onboards, and lands on the creator home", async ({ page }) => {
@@ -30,7 +30,7 @@ test("creator signs up with email OTP, onboards, and lands on the creator home",
   await page.goto("/brand");
   await expect(page).toHaveURL(/\/creator$/);
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut(page);
   await expect(page).toHaveURL(/\/login(\?|$)/);
   await expect(page.getByRole("heading", { name: "Sign in to BrandDeal" })).toBeVisible();
   await page.goto("/creator");

@@ -1,12 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { latestOtp, signInWithPassword, signUp, TEST_PASSWORD } from "./helpers";
+import { latestOtp, signInWithPassword, signOut, signUp, TEST_PASSWORD } from "./helpers";
 
 test("returning user signs in with email and password, no code", async ({ page }) => {
   const email = `e2e-pw-${Date.now()}@example.com`;
   await signUp(page, email, "creator");
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/login/);
+  await signOut(page);
 
   await signInWithPassword(page, email, "not my password");
   await expect(page.getByText("That email and password don't match.")).toBeVisible();
@@ -27,7 +26,7 @@ test("new email with a weak password is stopped before any code is sent", async 
 test("forgot password: reset with an emailed code, then sign in with the new password", async ({ page }) => {
   const email = `e2e-reset-${Date.now()}@example.com`;
   await signUp(page, email, "brand");
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut(page);
 
   await page.goto("/login");
   await page.getByRole("button", { name: "Forgot password?" }).click();
@@ -41,7 +40,7 @@ test("forgot password: reset with an emailed code, then sign in with the new pas
   await page.getByRole("button", { name: "Reset password and sign in" }).click();
   await expect(page).toHaveURL(/\/brand$/);
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut(page);
   await signInWithPassword(page, email, TEST_PASSWORD);
   await expect(page.getByText("That email and password don't match.")).toBeVisible();
   await signInWithPassword(page, email, "a brand new phrase");
@@ -64,7 +63,7 @@ test("change password from the account page", async ({ page }) => {
   await page.getByRole("button", { name: "Update password" }).click();
   await expect(page.getByText("Password saved.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut(page);
   await signInWithPassword(page, email, "second phrase here");
   await expect(page).toHaveURL(/\/creator$/);
 });

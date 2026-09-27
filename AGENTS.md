@@ -25,6 +25,10 @@ browser. Product docs, the decision log, event flows and the **API contract are 
     tokens from `globals.css`, user-facing error text from `src/lib/errors.ts`, money/date formatting from
     `src/lib/format.ts`.
   - Extract on the second real duplicate; keep it simple otherwise.
+- API URL modes: **direct** (default, ADR 0008): `NEXT_PUBLIC_API_URL=https://api.<domain>/api/v1`. **Proxy**: set
+  `API_ORIGIN` and `NEXT_PUBLIC_API_URL=/api/v1`; `next.config.ts` then rewrites `/api/v1/*` to the API so cookies are
+  first-party (needed when web and API don't share a parent domain, e.g. two `*.up.railway.app` hosts). Both are
+  build-time values.
 - API access: always use the typed client in `src/lib/api/client.ts` (`api.GET/POST…` + `unwrap`). It sends
   `credentials: 'include'` and the `X-Requested-With: fetch` CSRF header, and refreshes once on a 401 (ADR 0008).
 - Never read or store auth tokens in JS. They are httpOnly cookies set by the API.

@@ -6,7 +6,8 @@ export type { components };
 
 /**
  * Typed client for the BrandDeal API (contract synced from the API repo, ADR 0009).
- * The API is a separate deployment: the browser calls it directly with cookies (ADR 0008).
+ * The API is a separate deployment: the browser calls it directly with cookies (ADR 0008), or through this app's
+ * same-origin proxy when NEXT_PUBLIC_API_URL is the relative path "/api/v1" (see API_ORIGIN in next.config.ts).
  */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
 
