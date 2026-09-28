@@ -55,3 +55,32 @@ export function useDealAction<V>(dealId: string, action: (v: V) => Promise<Deal>
     },
   });
 }
+
+export type Dispute = components["schemas"]["Dispute"];
+export type DisputeReason = components["schemas"]["DisputeReason"];
+
+export const DISPUTE_REASONS: Record<DisputeReason, string> = {
+  NOT_PAID: "Payment not received",
+  NOT_DELIVERED: "Content not delivered",
+  CONTENT_ISSUE: "Problem with the content",
+  PRODUCT_NOT_RECEIVED: "Product not received",
+  OTHER: "Something else",
+};
+
+export const DISPUTE_OUTCOMES: Record<NonNullable<Dispute["outcome"]>, string> = {
+  RESUME: "The deal continues where it left off.",
+  COMPLETE: "The deal is marked completed.",
+  CANCEL: "The deal is cancelled.",
+};
+
+/** Deals a party can still raise an issue on (the API enforces the same set). */
+export const DISPUTABLE: Deal["status"][] = [
+  "ACTIVE",
+  "PRODUCT_SHIPPED",
+  "PRODUCT_RECEIVED",
+  "IN_PROGRESS",
+  "UNDER_REVIEW",
+  "CONTENT_APPROVED",
+  "PAYMENT_MARKED",
+];
+

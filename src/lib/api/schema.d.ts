@@ -1096,7 +1096,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Raise an issue for admin review */
+        /**
+         * Raise an issue for admin review
+         * @description Either party, while the deal is in progress (not completed, cancelled or already disputed: 409). The deal moves to DISPUTED and its steps pause until an admin resolves it; messages stay open. The other party and the admins are notified.
+         */
         post: operations["raiseDispute"];
         delete?: never;
         options?: never;
@@ -1366,6 +1369,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Disputes, open first (oldest first), then resolved (newest first) */
+        get: operations["adminListDisputes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/disputes/{disputeId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve a dispute
+         * @description RESUME puts the deal back where it was; COMPLETE completes it (counts and ratings as usual); CANCEL cancels it (not counted against either party). The resolution note is shown to both parties, who are notified. Audited.
+         */
+        post: operations["adminResolveDispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/pricing/rate-table": {
         parameters: {
             query?: never;
@@ -1488,7 +1528,7 @@ export interface components {
         /** @enum {string} */
         DisputeReason: "NOT_PAID" | "NOT_DELIVERED" | "CONTENT_ISSUE" | "PRODUCT_NOT_RECEIVED" | "OTHER";
         /** @enum {string} */
-        NotificationType: "VERIFICATION_APPROVED" | "VERIFICATION_REJECTED" | "APPLICATION_RECEIVED" | "APPLICATION_APPROVED" | "APPLICATION_REJECTED" | "INVITE_RECEIVED" | "PRODUCT_SHIPPED" | "SUBMISSION_RECEIVED" | "SUBMISSION_APPROVED" | "CHANGES_REQUESTED" | "PAYMENT_MARKED" | "PAYMENT_CONFIRMED" | "DEAL_CANCELLED" | "DEAL_COMPLETED" | "MESSAGE_RECEIVED" | "SYSTEM";
+        NotificationType: "VERIFICATION_APPROVED" | "VERIFICATION_REJECTED" | "APPLICATION_RECEIVED" | "APPLICATION_APPROVED" | "APPLICATION_REJECTED" | "INVITE_RECEIVED" | "PRODUCT_SHIPPED" | "SUBMISSION_RECEIVED" | "SUBMISSION_APPROVED" | "CHANGES_REQUESTED" | "PAYMENT_MARKED" | "PAYMENT_CONFIRMED" | "DEAL_CANCELLED" | "DEAL_COMPLETED" | "MESSAGE_RECEIVED" | "DISPUTE_RAISED" | "DISPUTE_RESOLVED" | "SYSTEM";
         /**
          * Format: int64
          * @description Amount in paise (₹1 = 100)
@@ -2093,6 +2133,8 @@ export interface components {
             myReview?: components["schemas"]["Review"];
             counterpartyReview?: components["schemas"]["Review"];
             cancelReason?: string;
+            /** @description The deal's latest dispute, if any */
+            dispute?: components["schemas"]["Dispute"];
             timeline: components["schemas"]["DealEvent"][];
         };
         DealDeliverable: {
@@ -2180,9 +2222,28 @@ export interface components {
             description?: string;
             /** @enum {string} */
             status: "OPEN" | "RESOLVED";
+            raisedBy?: components["schemas"]["UserRef"];
+            outcome?: components["schemas"]["DisputeOutcome"];
             resolution?: string;
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            resolvedAt?: string;
+        };
+        /** @enum {string} */
+        DisputeOutcome: "RESUME" | "COMPLETE" | "CANCEL";
+        ResolveDisputeRequest: {
+            outcome: components["schemas"]["DisputeOutcome"];
+            resolution: string;
+        };
+        AdminDispute: components["schemas"]["Dispute"] & {
+            deal: components["schemas"]["DealSummary"];
+            /** @description Where the deal was when the dispute was raised (open disputes only) */
+            statusBeforeDispute?: components["schemas"]["DealStatus"];
+        };
+        AdminDisputePage: {
+            items: components["schemas"]["AdminDispute"][];
+            nextCursor?: string;
         };
         DealEvent: {
             /** @description e.g. DEAL_CREATED, PRODUCT_SHIPPED, SUBMISSION_CREATED */
@@ -2494,6 +2555,7 @@ export interface components {
         CampaignId: string;
         ApplicationId: string;
         DealId: string;
+        DisputeId: string;
         SubmissionId: string;
         CreatorId: string;
         UserId: string;
@@ -4591,10 +4653,11 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["Unprocessable"];
             429: components["responses"]["TooManyRequests"];
-            501: components["responses"]["NotImplemented"];
         };
     };
     createReview: {
@@ -5074,6 +5137,68 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    adminListDisputes: {
+        parameters: {
+            query?: {
+                status?: "OPEN" | "RESOLVED";
+                /** @description Opaque cursor from a previous page's `nextCursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of disputes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDisputePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    adminResolveDispute: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                disputeId: components["parameters"]["DisputeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveDisputeRequest"];
+            };
+        };
+        responses: {
+            /** @description Resolved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDispute"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     adminGetRateTable: {
