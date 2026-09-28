@@ -47,6 +47,16 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 | Verify | `npm run lint && npm run typecheck && npm run api:check && npm run build` |
 | E2E (real browser) | API repo: `docker compose up -d` + bootRun with `ADMIN_EMAILS=admin@branddeal.local` and relaxed OTP limits (see README); here: `npm run e2e` (reads OTPs from Mailpit) |
 
+### E2E notes
+- The API usually runs in Docker locally (see "Local development notes" in the API repo's `AGENTS.md`); it must have
+  `ADMIN_EMAILS=admin@branddeal.local` and the relaxed OTP limits. Mailpit (http://localhost:8025) supplies codes.
+- `e2e/global-setup.ts` signs the admin in once per run into `e2e/.auth/admin.json`; admin steps use
+  `browser.newContext({ storageState: ADMIN_STATE })` and API setup uses `api-fixtures.ts` (e.g. `createBrandWithCampaign`
+  verifies the brand through the admin API, since new brands can't publish until verified).
+- The first sign-in right after an API restart can be slow and time out once; rerun before debugging.
+- Prefer `page.goto(url)` over clicking nav links right after a `reload()` (clicks can land before hydration).
+- Screenshots for design checks: write a temporary `e2e/zz-*.tmp.spec.ts`, run it, delete it.
+
 ## Design system (look & feel)
 - Palette (Tailwind v4 `@theme` in `src/app/globals.css`): `ink` #121212, `ivory` #faf7f2, `cream`, `sand`, `gold` #b08d57
   (+ `gold-soft`, `gold-deep`). The `zinc-*` scale is remapped to warm neutrals, so existing `zinc` classes stay on-palette.
