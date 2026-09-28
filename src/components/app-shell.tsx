@@ -18,6 +18,7 @@ const NAV: Record<string, { href: string; label: string }[]> = {
     { href: "/creator/campaigns", label: "Campaigns" },
     { href: "/creator/applications", label: "Applications" },
     { href: "/deals", label: "Deals" },
+    { href: "/creator/earnings", label: "Earnings" },
     { href: "/creator/profile", label: "Profile" },
     { href: "/creator/verification", label: "Verification" },
     { href: "/account", label: "Account" },
@@ -26,6 +27,7 @@ const NAV: Record<string, { href: string; label: string }[]> = {
     { href: "/brand", label: "Home" },
     { href: "/brand/campaigns", label: "Campaigns" },
     { href: "/deals", label: "Deals" },
+    { href: "/brand/spend", label: "Spend" },
     { href: "/brand/profile", label: "Profile" },
     { href: "/account", label: "Account" },
   ],
@@ -53,6 +55,8 @@ export function AppShell({ me, children }: { me: Me; children: React.ReactNode }
   });
   const nav = NAV[me.role ?? ""] ?? [];
   const initial = (me.displayName ?? me.email).charAt(0).toUpperCase();
+  // The name next to the avatar is hidden on narrower screens, so the avatar carries it for tooltips and screen readers.
+  const signedInAs = `Signed in as ${me.displayName ?? me.email}`;
 
   return (
     <div className="flex flex-1 flex-col bg-ivory">
@@ -87,15 +91,20 @@ export function AppShell({ me, children }: { me: Me; children: React.ReactNode }
           <div className="flex items-center gap-3 text-sm">
             {me.role && me.role !== "ADMIN" && <NotificationBell />}
             <div className="hidden items-center gap-3 sm:flex">
-              <div className="hidden flex-col items-end leading-tight xl:flex">
+              <div className="hidden flex-col items-end leading-tight 2xl:flex">
                 <span className="max-w-48 truncate text-ink">{me.displayName ?? me.email}</span>
                 <span className="text-[11px] uppercase tracking-[0.18em] text-gold-deep">{ROLE_LABEL[me.role ?? ""] ?? "Member"}</span>
               </div>
               {me.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={me.avatarUrl} alt="" className="size-9 rounded-full object-cover ring-2 ring-gold/30" />
+                <img src={me.avatarUrl} alt={signedInAs} title={signedInAs} className="size-9 rounded-full object-cover ring-2 ring-gold/30" />
               ) : (
-                <span className="grid size-9 place-items-center rounded-full bg-ink font-display text-sm text-gold-soft ring-2 ring-gold/30">
+                <span
+                  role="img"
+                  aria-label={signedInAs}
+                  title={signedInAs}
+                  className="grid size-9 place-items-center rounded-full bg-ink font-display text-sm text-gold-soft ring-2 ring-gold/30"
+                >
                   {initial}
                 </span>
               )}

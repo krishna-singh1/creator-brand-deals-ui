@@ -82,7 +82,7 @@ export async function createVerifiedCreator(displayName: string): Promise<string
   });
   expect(profile.ok(), await profile.text()).toBe(true);
   const account = await creator.post("creator/social-accounts", {
-    data: { platform: "INSTAGRAM", handle: `vc${Date.now().toString(36)}`, followers: 18000, avgLikes: 700, avgComments: 40 },
+    data: { platform: "INSTAGRAM", handle: `vc${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`, followers: 18000, avgLikes: 700, avgComments: 40 },
   });
   expect(account.ok(), await account.text()).toBe(true);
 

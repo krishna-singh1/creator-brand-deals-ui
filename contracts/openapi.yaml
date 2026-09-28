@@ -764,6 +764,60 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
 
+  /creator/earnings:
+    get:
+      tags: [creator]
+      operationId: getCreatorEarnings
+      summary: Earnings over a date range, month by month
+      description: >
+        What brands paid the creator. `confirmedPaise` is money the creator confirmed receiving; `awaitingConfirmationPaise` is recorded by the brand but not yet confirmed.
+        Payments are made off-platform and recorded by the brand on the deal. Amounts are grouped by the payment date
+        (`paidOn`, IST). `from`/`to` are inclusive; the default is the last 12 months including the current one. The
+        range can be at most 5 years.
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Report for the range
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentReport' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /brand/spend:
+    get:
+      tags: [brand]
+      operationId: getBrandSpend
+      summary: Spend over a date range, month by month
+      description: >
+        What the brand paid creators. `totalPaise` is everything recorded; `awaitingConfirmationPaise` is the part creators haven't confirmed yet.
+        Payments are made off-platform and recorded by the brand on the deal. Amounts are grouped by the payment date
+        (`paidOn`, IST). `from`/`to` are inclusive; the default is the last 12 months including the current one. The
+        range can be at most 5 years.
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Report for the range
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentReport' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
   /brand/dashboard:
     get:
       tags: [brand]
@@ -3353,6 +3407,52 @@ components:
           type: array
           items: { $ref: '#/components/schemas/CampaignFeedItem' }
         nextCursor: { type: string }
+    PaymentReport:
+      type: object
+      required: [from, to, totalPaise, confirmedPaise, awaitingConfirmationPaise, paymentCount, productValuePaise, productDealCount, months, payments]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        totalPaise: { $ref: '#/components/schemas/Paise' }
+        confirmedPaise: { $ref: '#/components/schemas/Paise' }
+        awaitingConfirmationPaise: { $ref: '#/components/schemas/Paise' }
+        paymentCount: { type: integer, minimum: 0 }
+        productValuePaise:
+          allOf: [{ $ref: '#/components/schemas/Paise' }]
+          description: MRP of products in barter deals completed in the range (not money)
+        productDealCount: { type: integer, minimum: 0 }
+        months:
+          type: array
+          description: One entry per calendar month in the range, oldest first, including months with nothing
+          items: { $ref: '#/components/schemas/PaymentReportMonth' }
+        payments:
+          type: array
+          description: Payments in the range, newest first
+          items: { $ref: '#/components/schemas/PaymentReportItem' }
+
+    PaymentReportMonth:
+      type: object
+      required: [month, totalPaise, confirmedPaise, paymentCount]
+      properties:
+        month: { type: string, pattern: '^[0-9]{4}-[0-9]{2}$', example: '2026-09' }
+        totalPaise: { $ref: '#/components/schemas/Paise' }
+        confirmedPaise: { $ref: '#/components/schemas/Paise' }
+        paymentCount: { type: integer, minimum: 0 }
+
+    PaymentReportItem:
+      type: object
+      required: [dealId, campaignTitle, counterpartyName, amountPaise, paidOn, confirmed]
+      properties:
+        dealId: { type: string, format: uuid }
+        campaignTitle: { type: string }
+        counterpartyName:
+          type: string
+          description: Brand name (creator view) or creator display name (brand view)
+        amountPaise: { $ref: '#/components/schemas/Paise' }
+        mode: { $ref: '#/components/schemas/PaymentMode' }
+        paidOn: { type: string, format: date }
+        confirmed: { type: boolean }
+
     DealSummaryPage:
       type: object
       required: [items]

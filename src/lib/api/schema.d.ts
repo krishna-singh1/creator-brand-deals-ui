@@ -513,6 +513,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/creator/earnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Earnings over a date range, month by month
+         * @description What brands paid the creator. `confirmedPaise` is money the creator confirmed receiving; `awaitingConfirmationPaise` is recorded by the brand but not yet confirmed. Payments are made off-platform and recorded by the brand on the deal. Amounts are grouped by the payment date (`paidOn`, IST). `from`/`to` are inclusive; the default is the last 12 months including the current one. The range can be at most 5 years.
+         */
+        get: operations["getCreatorEarnings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brand/spend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Spend over a date range, month by month
+         * @description What the brand paid creators. `totalPaise` is everything recorded; `awaitingConfirmationPaise` is the part creators haven't confirmed yet. Payments are made off-platform and recorded by the brand on the deal. Amounts are grouped by the payment date (`paidOn`, IST). `from`/`to` are inclusive; the default is the last 12 months including the current one. The range can be at most 5 years.
+         */
+        get: operations["getBrandSpend"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/brand/dashboard": {
         parameters: {
             query?: never;
@@ -2276,6 +2316,42 @@ export interface components {
             items: components["schemas"]["CampaignFeedItem"][];
             nextCursor?: string;
         };
+        PaymentReport: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            totalPaise: components["schemas"]["Paise"];
+            confirmedPaise: components["schemas"]["Paise"];
+            awaitingConfirmationPaise: components["schemas"]["Paise"];
+            paymentCount: number;
+            /** @description MRP of products in barter deals completed in the range (not money) */
+            productValuePaise: components["schemas"]["Paise"];
+            productDealCount: number;
+            /** @description One entry per calendar month in the range, oldest first, including months with nothing */
+            months: components["schemas"]["PaymentReportMonth"][];
+            /** @description Payments in the range, newest first */
+            payments: components["schemas"]["PaymentReportItem"][];
+        };
+        PaymentReportMonth: {
+            /** @example 2026-09 */
+            month: string;
+            totalPaise: components["schemas"]["Paise"];
+            confirmedPaise: components["schemas"]["Paise"];
+            paymentCount: number;
+        };
+        PaymentReportItem: {
+            /** Format: uuid */
+            dealId: string;
+            campaignTitle: string;
+            /** @description Brand name (creator view) or creator display name (brand view) */
+            counterpartyName: string;
+            amountPaise: components["schemas"]["Paise"];
+            mode?: components["schemas"]["PaymentMode"];
+            /** Format: date */
+            paidOn: string;
+            confirmed: boolean;
+        };
         DealSummaryPage: {
             items: components["schemas"]["DealSummary"][];
             nextCursor?: string;
@@ -3366,6 +3442,58 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getCreatorEarnings: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report for the range */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["Unprocessable"];
+        };
+    };
+    getBrandSpend: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report for the range */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["Unprocessable"];
         };
     };

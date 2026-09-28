@@ -24,7 +24,7 @@ test("creator signs up with email OTP, onboards, and lands on the creator home",
 
   // Session survives a reload (httpOnly cookies set by the API on its own origin).
   await page.reload();
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByRole("img", { name: `Signed in as ${email}` })).toBeVisible();
 
   // Role guard: a creator can't open the brand area.
   await page.goto("/brand");
