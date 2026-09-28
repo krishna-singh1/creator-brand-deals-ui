@@ -78,6 +78,12 @@ browser. Product docs, the decision log, event flows and the **API contract are 
   `api-fixtures.ts`: API-level setup such as a verified creator or an approved deal; `global-setup.ts` signs the
   bootstrap admin in once per run (email code) and saves `e2e/.auth/admin.json` for specs to reuse)
 
+## Docs
+Product docs live in the API repo (`creator-brand-deals/docs`). A web PR that adds or changes a page, navigation or a
+user-visible flow also needs a matching API-repo PR updating `docs/06-web-pages.md` (and `docs/08-roadmap.md` /
+`docs/01-prd.md` when it finishes a roadmap item), unless the web change ships with an API PR that already does it.
+See the docs checklist in the API repo's `AGENTS.md`. Name the docs updated in the PR description ("Docs: …").
+
 ## Git
 - Commit author `krishna-singh1` (repo-local config). Short, action-only commit messages (e.g. "Add catalog API").
   No co-author trailers.
