@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { latestOtp, signInWithPassword, signOut, signUp, TEST_PASSWORD } from "./helpers";
+import { latestOtp, openProfileMenu, signInWithPassword, signOut, signUp, TEST_PASSWORD } from "./helpers";
 
 test("returning user signs in with email and password, no code", async ({ page }) => {
   const email = `e2e-pw-${Date.now()}@example.com`;
@@ -50,7 +50,8 @@ test("forgot password: reset with an emailed code, then sign in with the new pas
 test("change password from the account page", async ({ page }) => {
   const email = `e2e-change-${Date.now()}@example.com`;
   await signUp(page, email, "creator");
-  await page.getByRole("link", { name: "Account" }).click();
+  await openProfileMenu(page);
+  await page.getByRole("link", { name: "Account & security" }).click();
   await expect(page.getByRole("heading", { name: "Change password" })).toBeVisible();
 
   await page.getByLabel("Current password").fill("wrong current password");

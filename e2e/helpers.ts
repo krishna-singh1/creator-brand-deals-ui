@@ -44,9 +44,16 @@ export async function signIn(page: Page, email: string) {
   await page.getByRole("button", { name: "Verify and continue" }).click();
 }
 
+/** Opens the profile side panel from the avatar (personal pages, money, account, sign-out). */
+export async function openProfileMenu(page: Page) {
+  await page.getByRole("button", { name: /^Open profile menu/ }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+}
+
 /** Signs out and waits until the session is gone (navigating away earlier would cancel the logout request). */
 export async function signOut(page: Page) {
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await openProfileMenu(page);
+  await page.getByRole("dialog").getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login/);
 }
 

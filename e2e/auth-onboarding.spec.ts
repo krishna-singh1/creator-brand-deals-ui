@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { createPassword, latestOtp, signIn, signOut } from "./helpers";
+import { createPassword, latestOtp, openProfileMenu, signIn, signOut } from "./helpers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
 test("creator signs up with email OTP, onboards, and lands on the creator home", async ({ page }) => {
@@ -24,7 +24,17 @@ test("creator signs up with email OTP, onboards, and lands on the creator home",
 
   // Session survives a reload (httpOnly cookies set by the API on its own origin).
   await page.reload();
-  await expect(page.getByRole("img", { name: `Signed in as ${email}` })).toBeVisible();
+  await expect(page.getByRole("button", { name: `Open profile menu (signed in as ${email})` })).toBeVisible();
+
+  // The profile panel: personal pages, Esc closes it and focus returns to the avatar.
+  await openProfileMenu(page);
+  const panel = page.getByRole("dialog");
+  await expect(panel.getByText(email)).toBeVisible();
+  await expect(panel.getByRole("link", { name: /Verification/ })).toContainText("Not verified yet");
+  await expect(panel.getByRole("link", { name: /Finish your profile/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(page.getByRole("button", { name: /^Open profile menu/ })).toBeFocused();
 
   // Role guard: a creator can't open the brand area.
   await page.goto("/brand");

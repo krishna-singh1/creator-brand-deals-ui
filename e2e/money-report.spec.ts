@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { apiSession, createApprovedDeal } from "./api-fixtures";
-import { signInWithPassword } from "./helpers";
+import { openProfileMenu, signInWithPassword } from "./helpers";
 
 /** Takes an approved cash deal through content approval, payment and confirmation via the API. */
 async function payDeal(brandEmail: string, creatorEmail: string, dealId: string, amountPaise: number) {
@@ -29,9 +29,12 @@ test("creator sees earnings and brand sees spend, by time frame, with a CSV down
   const creator = await (await browser.newContext()).newPage();
   await signInWithPassword(creator, creatorEmail);
   await expect(creator).toHaveURL(/\/creator$/);
-  await creator.getByRole("link", { name: "Earnings" }).click();
+  await openProfileMenu(creator);
+  await expect(creator.getByRole("link", { name: /Earnings/ })).toContainText("₹4,500 this month");
+  await creator.getByRole("link", { name: /Earnings/ }).click();
+  await expect(creator.getByRole("dialog")).toBeHidden();
   await expect(creator.getByRole("heading", { name: "What you've earned" })).toBeVisible();
-  await expect(creator.getByText("₹4,500").first()).toBeVisible();
+  await expect(creator.getByRole("main").getByText("₹4,500").first()).toBeVisible();
   await expect(creator.getByRole("row").filter({ hasText: title })).toContainText("Confirmed");
 
   // A custom range with no payments.
@@ -45,7 +48,8 @@ test("creator sees earnings and brand sees spend, by time frame, with a CSV down
   const brand = await (await browser.newContext()).newPage();
   await signInWithPassword(brand, brandEmail);
   await expect(brand).toHaveURL(/\/brand$/);
-  await brand.getByRole("link", { name: "Spend" }).click();
+  await openProfileMenu(brand);
+  await brand.getByRole("link", { name: /Spend/ }).click();
   await expect(brand.getByRole("heading", { name: "What you've spent" })).toBeVisible();
   await expect(brand.getByRole("row").filter({ hasText: title })).toContainText("Kavya Creates");
   const download = brand.waitForEvent("download");
