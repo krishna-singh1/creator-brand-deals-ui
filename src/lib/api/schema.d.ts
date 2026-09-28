@@ -1110,10 +1110,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Messages in the deal thread */
+        /**
+         * Messages in the deal thread
+         * @description Only the deal's brand and creator can read it (others get 404).
+         */
         get: operations["listDealMessages"];
         put?: never;
-        /** Post a message to the deal thread */
+        /**
+         * Post a message to the deal thread
+         * @description Parties only. Cancelled deals are read-only (409). The other party gets a MESSAGE_RECEIVED notification and an email, once per unread batch: further messages don't notify again until they've read the last one.
+         */
         post: operations["sendDealMessage"];
         delete?: never;
         options?: never;
@@ -1464,7 +1470,7 @@ export interface components {
         /** @enum {string} */
         DisputeReason: "NOT_PAID" | "NOT_DELIVERED" | "CONTENT_ISSUE" | "PRODUCT_NOT_RECEIVED" | "OTHER";
         /** @enum {string} */
-        NotificationType: "VERIFICATION_APPROVED" | "VERIFICATION_REJECTED" | "APPLICATION_RECEIVED" | "APPLICATION_APPROVED" | "APPLICATION_REJECTED" | "INVITE_RECEIVED" | "PRODUCT_SHIPPED" | "SUBMISSION_RECEIVED" | "SUBMISSION_APPROVED" | "CHANGES_REQUESTED" | "PAYMENT_MARKED" | "PAYMENT_CONFIRMED" | "DEAL_CANCELLED" | "DEAL_COMPLETED" | "SYSTEM";
+        NotificationType: "VERIFICATION_APPROVED" | "VERIFICATION_REJECTED" | "APPLICATION_RECEIVED" | "APPLICATION_APPROVED" | "APPLICATION_REJECTED" | "INVITE_RECEIVED" | "PRODUCT_SHIPPED" | "SUBMISSION_RECEIVED" | "SUBMISSION_APPROVED" | "CHANGES_REQUESTED" | "PAYMENT_MARKED" | "PAYMENT_CONFIRMED" | "DEAL_CANCELLED" | "DEAL_COMPLETED" | "MESSAGE_RECEIVED" | "SYSTEM";
         /**
          * Format: int64
          * @description Amount in paise (₹1 = 100)
@@ -4628,8 +4634,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            501: components["responses"]["NotImplemented"];
         };
     };
     sendDealMessage: {
@@ -4660,10 +4666,11 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["Unprocessable"];
             429: components["responses"]["TooManyRequests"];
-            501: components["responses"]["NotImplemented"];
         };
     };
     listNotifications: {

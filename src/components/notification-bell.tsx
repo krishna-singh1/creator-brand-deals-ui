@@ -9,7 +9,7 @@ import { formatDateTime } from "@/lib/format";
 
 type Notification = components["schemas"]["Notification"];
 
-const KEY = ["notifications"];
+export const NOTIFICATIONS_KEY = ["notifications"];
 
 /** Bell with unread count; the panel lists recent notifications. Polls every minute. */
 export function NotificationBell() {
@@ -18,11 +18,11 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const { data } = useQuery({
-    queryKey: KEY,
+    queryKey: NOTIFICATIONS_KEY,
     queryFn: () => unwrap(api.GET("/notifications", { params: { query: { limit: 10 } } })),
     refetchInterval: 60_000,
   });
-  const refresh = () => queryClient.invalidateQueries({ queryKey: KEY });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
   const markRead = useMutation({
     mutationFn: (id: string) => api.POST("/notifications/{notificationId}/read", { params: { path: { notificationId: id } } }),
     onSuccess: refresh,

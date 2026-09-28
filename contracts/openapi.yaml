@@ -1656,7 +1656,7 @@ paths:
       tags: [deal]
       operationId: listDealMessages
       summary: Messages in the deal thread
-      x-priority: P1
+      description: Only the deal's brand and creator can read it (others get 404).
       parameters:
         - $ref: '#/components/parameters/DealId'
         - $ref: '#/components/parameters/Cursor'
@@ -1668,13 +1668,15 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DealMessagePage' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
     post:
       tags: [deal]
       operationId: sendDealMessage
       summary: Post a message to the deal thread
-      x-priority: P1
+      description: >
+        Parties only. Cancelled deals are read-only (409). The other party gets a MESSAGE_RECEIVED notification and
+        an email, once per unread batch: further messages don't notify again until they've read the last one.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/DealId'
@@ -1691,8 +1693,9 @@ paths:
               schema: { $ref: '#/components/schemas/DealMessage' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
   # ───────────────────────────── notification ─────────────────────────────
@@ -2341,6 +2344,7 @@ components:
         - PAYMENT_CONFIRMED
         - DEAL_CANCELLED
         - DEAL_COMPLETED
+        - MESSAGE_RECEIVED
         - SYSTEM
 
     # ─────────── shared ───────────

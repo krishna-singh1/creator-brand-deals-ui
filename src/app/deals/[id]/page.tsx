@@ -14,6 +14,7 @@ import { CANCELLABLE, type Deal, dealKey, dealSteps, NEXT_ACTION_COPY } from "@/
 import { DELIVERABLE_LABELS, formatDateTime, formatPaise } from "@/lib/format";
 
 import { DeliverablesPanel } from "./deliverables-panel";
+import { MessagesPanel } from "./messages-panel";
 import { CancelDeal, PaymentPanel, ReviewPanel, ShipmentPanel } from "./step-panels";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -39,14 +40,14 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
     <RequireSession>
       {(me) => (
         <AppShell me={me}>
-          <DealView id={id} isBrand={me.role === "BRAND"} />
+          <DealView id={id} isBrand={me.role === "BRAND"} meId={me.id} />
         </AppShell>
       )}
     </RequireSession>
   );
 }
 
-function DealView({ id, isBrand }: { id: string; isBrand: boolean }) {
+function DealView({ id, isBrand, meId }: { id: string; isBrand: boolean; meId: string }) {
   const { data: deal } = useQuery({
     queryKey: dealKey(id),
     queryFn: () => unwrap(api.GET("/deals/{dealId}", { params: { path: { dealId: id } } })),
@@ -99,6 +100,7 @@ function DealView({ id, isBrand }: { id: string; isBrand: boolean }) {
           {CANCELLABLE.includes(deal.status) && nothingSubmitted && <CancelDeal deal={deal} />}
         </div>
         <div className="flex flex-col gap-6">
+          <MessagesPanel dealId={deal.id} meId={meId} partnerName={partnerName} readOnly={deal.status === "CANCELLED"} />
           <Card>
             <SectionTitle title={isBrand ? "Creator contact" : "Brand contact"} />
             <dl className="flex flex-col gap-2 text-sm">
