@@ -120,6 +120,40 @@ export function Card({
   );
 }
 
+/** Accessible on/off switch (role="switch"); the label names the setting. */
+export function Switch({
+  checked,
+  onChange,
+  label,
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-300 ${EASE} focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+        checked ? "bg-ink" : "bg-zinc-300"
+      }`}
+    >
+      <span
+        aria-hidden
+        className={`inline-block size-5 rounded-full bg-ivory shadow-soft transition-transform duration-300 ${EASE} ${
+          checked ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
+  );
+}
+
 export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <span className={`inline-flex items-center gap-3 text-xs font-medium uppercase tracking-[0.28em] text-gold-deep ${className}`}>

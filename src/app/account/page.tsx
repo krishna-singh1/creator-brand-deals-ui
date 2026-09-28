@@ -1,13 +1,13 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { PasswordField } from "@/components/password-input";
 import { RequireSession } from "@/components/require-session";
-import { Button, Card, ErrorText, Input, PageTitle, SectionTitle, Spinner, SuccessText } from "@/components/ui";
+import { Button, Card, ErrorText, Input, PageTitle, SectionTitle, Skeleton, Spinner, SuccessText, Switch } from "@/components/ui";
 import { api, type Me, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
 import { useSetMe } from "@/lib/session";
@@ -20,6 +20,7 @@ export default function AccountPage() {
           <div className="flex max-w-2xl flex-col gap-10">
             <PageTitle eyebrow="Account" title="Sign-in & security" subtitle={`Signed in as ${me.email}`} />
             <PasswordCard key={String(me.hasPassword)} me={me} />
+            <EmailNotificationsCard />
             <DeleteAccountCard />
           </div>
         </AppShell>
@@ -105,6 +106,47 @@ function PasswordCard({ me }: { me: Me }) {
           <ErrorText>{(mismatch && "Passwords don't match.") || (save.isError && errorMessage(save.error))}</ErrorText>
         </div>
       </form>
+    </Card>
+  );
+}
+
+const PREFERENCES_KEY = ["notifications", "preferences"];
+
+/** Activity emails on/off (D-35). In-app notifications keep coming; sign-in and security emails always go out. */
+function EmailNotificationsCard() {
+  const queryClient = useQueryClient();
+  const { data, isPending } = useQuery({
+    queryKey: PREFERENCES_KEY,
+    queryFn: () => unwrap(api.GET("/notifications/preferences")),
+  });
+  const save = useMutation({
+    mutationFn: (emailEnabled: boolean) => unwrap(api.PUT("/notifications/preferences", { body: { emailEnabled } })),
+    onSuccess: (updated) => queryClient.setQueryData(PREFERENCES_KEY, updated),
+  });
+  const enabled = save.isPending ? save.variables : data?.emailEnabled;
+
+  return (
+    <Card>
+      <SectionTitle
+        title="Email notifications"
+        subtitle="Emails about applications, deals, verification, campaign updates, reminders and daily digests. You'll still see everything in the notification bell. Sign-in codes and security alerts are always sent."
+      />
+      <div className="flex items-center justify-between gap-6">
+        <span className="text-sm text-zinc-700">
+          {enabled === undefined ? "Loading…" : enabled ? "Emails are on" : "Emails are off"}
+        </span>
+        {isPending ? (
+          <Skeleton className="h-7 w-12 rounded-full" />
+        ) : (
+          <Switch
+            label="Email notifications"
+            checked={enabled ?? true}
+            disabled={save.isPending || data === undefined}
+            onChange={(next) => save.mutate(next)}
+          />
+        )}
+      </div>
+      <ErrorText>{save.isError && errorMessage(save.error)}</ErrorText>
     </Card>
   );
 }

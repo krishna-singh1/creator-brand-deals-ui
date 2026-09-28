@@ -1199,6 +1199,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Caller's notification preferences */
+        get: operations["getNotificationPreferences"];
+        /**
+         * Turn notification emails on or off
+         * @description With `emailEnabled: false` the user still gets in-app notifications but no activity emails (applications, deals, verification, campaigns, reminders, digests). Sign-in codes and security emails (password changed) are always sent.
+         */
+        put: operations["updateNotificationPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/verifications": {
         parameters: {
             query?: never;
@@ -2345,6 +2366,10 @@ export interface components {
             readAt?: string;
             /** Format: date-time */
             createdAt: string;
+        };
+        NotificationPreferences: {
+            /** @description Activity emails on (default) or off. Sign-in and security emails are always sent. */
+            emailEnabled: boolean;
         };
         AdminVerificationItem: {
             /** Format: uuid */
@@ -4899,6 +4924,57 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthenticated"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current preferences (email on by default) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferences"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationPreferences"];
+            };
+        };
+        responses: {
+            /** @description Saved preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferences"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["Unprocessable"];
             429: components["responses"]["TooManyRequests"];
         };
     };

@@ -1771,6 +1771,43 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
+  /notifications/preferences:
+    get:
+      tags: [notification]
+      operationId: getNotificationPreferences
+      summary: Caller's notification preferences
+      responses:
+        '200':
+          description: Current preferences (email on by default)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPreferences' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    put:
+      tags: [notification]
+      operationId: updateNotificationPreferences
+      summary: Turn notification emails on or off
+      description: >
+        With `emailEnabled: false` the user still gets in-app notifications but no activity emails (applications,
+        deals, verification, campaigns, reminders, digests). Sign-in codes and security emails (password changed)
+        are always sent.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationPreferences' }
+      responses:
+        '200':
+          description: Saved preferences
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPreferences' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   # ───────────────────────────── admin ─────────────────────────────
   /admin/verifications:
     get:
@@ -3499,6 +3536,13 @@ components:
         link: { type: string, description: Relative web path }
         readAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
+    NotificationPreferences:
+      type: object
+      required: [emailEnabled]
+      properties:
+        emailEnabled:
+          type: boolean
+          description: Activity emails on (default) or off. Sign-in and security emails are always sent.
 
     # ─────────── admin ───────────
     AdminVerificationItem:

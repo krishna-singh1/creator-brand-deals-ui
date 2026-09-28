@@ -63,7 +63,7 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 - Type: `font-display` = Playfair Display (headings, numbers, quotes), `font-sans` = Inter (body). Eyebrows are small
   uppercase gold text with wide tracking (`<Eyebrow>`).
 - Primitives in `src/components/ui.tsx`: `Button` (primary/gold/secondary/ghost/danger, pill, hover lift), `Input`/`Select`/
-  `Textarea` (gold focus ring), `Field`, `Card` (`interactive` lifts), `PageTitle`, `SectionTitle`, `StatusBadge`,
+  `Textarea` (gold focus ring), `Field`, `Switch` (accessible on/off, `role="switch"`), `Card` (`interactive` lifts), `PageTitle`, `SectionTitle`, `StatusBadge`,
   `Spinner`, `Skeleton`.
 - Motion in `src/components/motion.tsx` (no animation library): `Reveal` (scroll reveal via IntersectionObserver,
   `delay` to stagger), `Counter`, `Parallax`, `AnimatedWords`, `useScrolled`. CSS keyframes: `animate-fade-up`,
@@ -102,11 +102,15 @@ See the docs checklist in the API repo's `AGENTS.md`. Name the docs updated in t
   1. Start from the latest `master`: `git checkout master && git pull --ff-only origin master`.
   2. Create a branch for the feature or fix: `git checkout -b <type>/<short-kebab-name>`, with `<type>` one of
      `feat`, `fix`, `chore`, `docs`. One branch per feature.
-  3. Commit after each tested unit of work.
-  4. When the feature is complete and verified (see "Verification" / "Commands"), push the branch
+  3. **Keep the branch current with `master`.** Before any new code or change on an existing branch, and again
+     before every push or PR: `git fetch origin && git merge origin/master`. Resolve conflicts on the branch (keep
+     what `master` changed and re-apply the branch's intent), re-run the checks, then continue. Merge, don't rebase,
+     so no force-push is ever needed. Do the same in the other repo when the feature spans both.
+  4. Commit after each tested unit of work.
+  5. When the feature is complete and verified (see "Verification" / "Commands"), push the branch
      (`git push -u origin <branch>`) and open a PR into `master`: title = what it does; body = what changed, why,
      and how it was tested. Use `gh pr create --base master` when the GitHub CLI is available; otherwise share
      `https://github.com/krishna-singh1/creator-brand-deals-ui/compare/master...<branch>?expand=1`.
-  5. Don't merge PRs, force-push, or delete branches: the user reviews and merges.
+  6. Don't merge PRs, force-push, or delete branches: the user reviews and merges.
 - Features that span both repos use the same branch name in each (this repo and `creator-brand-deals (API)`), one PR per repo,
   each linking the other.
