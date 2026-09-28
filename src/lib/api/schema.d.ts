@@ -2109,6 +2109,8 @@ export interface components {
             /** Format: uri */
             postUrl: string;
             screenshotFileIds?: string[];
+            /** @description Short-lived links to the screenshots (same order as screenshotFileIds), for the deal's brand and creator. Links expire (see expiresAt); fetch the deal again for fresh ones. */
+            screenshots?: components["schemas"]["FileUrl"][];
             notes?: string;
             disclosureConfirmed: boolean;
             reviewStatus: components["schemas"]["SubmissionReviewStatus"];
