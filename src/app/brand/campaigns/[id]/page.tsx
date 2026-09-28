@@ -43,6 +43,15 @@ function Detail({ id }: { id: string }) {
   };
   const publish = useMutation({ mutationFn: () => unwrap(api.POST("/campaigns/{campaignId}/publish", path)), onSuccess: refresh });
   const close = useMutation({ mutationFn: () => unwrap(api.POST("/campaigns/{campaignId}/close", path)), onSuccess: refresh });
+  // Same brief as a new draft; the brand adjusts it in the editor, then publishes.
+  const reopen = useMutation({
+    mutationFn: () => unwrap(api.POST("/campaigns/{campaignId}/duplicate", path)),
+    onSuccess: (copy) => {
+      queryClient.setQueryData(["campaigns", copy.id], copy);
+      refresh();
+      router.push(`/brand/campaigns/${copy.id}/edit?reopened=1`);
+    },
+  });
   const remove = useMutation({
     mutationFn: () => api.DELETE("/campaigns/{campaignId}", path),
     onSuccess: () => {
@@ -52,7 +61,8 @@ function Detail({ id }: { id: string }) {
   });
 
   if (!c) return <ContentSkeleton />;
-  const error = [publish, close, remove].find((m) => m.isError)?.error;
+  const error = [publish, close, remove, reopen].find((m) => m.isError)?.error;
+  const finished = c.status === "CLOSED" || c.status === "ARCHIVED";
 
   return (
     <div className="flex flex-col gap-10">
@@ -108,6 +118,14 @@ function Detail({ id }: { id: string }) {
               Close applications
             </Button>
           </>
+        )}
+        {c.status !== "UNPUBLISHED_BY_ADMIN" && (
+          <Button variant={finished ? "gold" : "ghost"} disabled={reopen.isPending} onClick={() => reopen.mutate()}>
+            {reopen.isPending ? "Copying…" : finished ? "Reopen as new campaign" : "Duplicate"}
+          </Button>
+        )}
+        {c.status === "UNPUBLISHED_BY_ADMIN" && (
+          <p className="text-sm text-red-700">Taken down by BrandDeal for breaking the guidelines. It can&apos;t be reopened.</p>
         )}
         <ErrorText>{error && errorMessage(error)}</ErrorText>
       </div>

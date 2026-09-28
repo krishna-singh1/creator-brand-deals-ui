@@ -685,6 +685,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/campaigns/{campaignId}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen as a new draft with the same brief
+         * @description Creates a new DRAFT owned by the same brand with every brief field copied (title, description, deliverables, criteria, budget, categories, guidelines, brief file). If the source's apply-by date has passed, the dates move forward to start 7 days from today, keeping their spacing. Application counts start at zero. Campaigns taken down by an admin can't be reopened (409).
+         */
+        post: operations["duplicateCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/campaigns/{campaignId}/public": {
         parameters: {
             query?: never;
@@ -3694,6 +3714,36 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    duplicateCampaign: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                campaignId: components["parameters"]["CampaignId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description New draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Campaign"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["Unprocessable"];
         };
     };
     getCampaignForCreator: {

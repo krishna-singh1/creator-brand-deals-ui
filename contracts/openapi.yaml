@@ -1032,6 +1032,31 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
+  /campaigns/{campaignId}/duplicate:
+    post:
+      tags: [campaign]
+      operationId: duplicateCampaign
+      summary: Reopen as a new draft with the same brief
+      description: >
+        Creates a new DRAFT owned by the same brand with every brief field copied (title, description, deliverables,
+        criteria, budget, categories, guidelines, brief file). If the source's apply-by date has passed, the dates move
+        forward to start 7 days from today, keeping their spacing. Application counts start at zero. Campaigns taken
+        down by an admin can't be reopened (409).
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '201':
+          description: New draft
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
   /campaigns/{campaignId}/public:
     get:
       tags: [campaign]
