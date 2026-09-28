@@ -6,6 +6,7 @@ import { Button, Card, ErrorText, Field, Input, SectionTitle, StatusBadge, Texta
 import { api, unwrap } from "@/lib/api/client";
 import { type Deal, type DealDeliverable, dealKey } from "@/lib/deals";
 import { errorMessage } from "@/lib/errors";
+import { uploadFile } from "@/lib/upload";
 import { DELIVERABLE_LABELS } from "@/lib/format";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -47,6 +48,18 @@ function DeliverableRow({ dealId, deliverable: d, isBrand, canSubmit }: { dealId
             {s.postUrl}
           </a>
           {s.notes && <p className="mt-1 text-zinc-600">{s.notes}</p>}
+          {s.screenshots && s.screenshots.length > 0 && (
+            <ul className="mt-3 flex flex-wrap gap-2" aria-label={`Screenshots for ${label}`}>
+              {s.screenshots.map((shot, i) => (
+                <li key={shot.url}>
+                  <a href={shot.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl ring-1 ring-zinc-200 transition hover:ring-gold">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={shot.url} alt={`Screenshot ${i + 1} of ${s.screenshots!.length}`} className="size-20 object-cover" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
           {s.reviewComment && <p className="mt-2 text-amber-900">Brand&apos;s note: {s.reviewComment}</p>}
         </div>
       )}
@@ -60,14 +73,18 @@ function SubmitForm({ dealId, deliverableId, label, onDone }: { dealId: string; 
   const [postUrl, setPostUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [disclosed, setDisclosed] = useState(false);
+  const [shots, setShots] = useState<File[]>([]);
   const submit = useMutation({
-    mutationFn: () =>
-      unwrap(
+    mutationFn: async () => {
+      const screenshotFileIds = [];
+      for (const file of shots) screenshotFileIds.push(await uploadFile("SUBMISSION_SCREENSHOT", file));
+      return unwrap(
         api.POST("/deals/{dealId}/deliverables/{deliverableId}/submissions", {
           params: { path: { dealId, deliverableId } },
-          body: { postUrl, notes: notes || undefined, disclosureConfirmed: disclosed },
+          body: { postUrl, screenshotFileIds, notes: notes || undefined, disclosureConfirmed: disclosed },
         }),
-      ),
+      );
+    },
     onSuccess: onDone,
   });
   return (
@@ -81,6 +98,16 @@ function SubmitForm({ dealId, deliverableId, label, onDone }: { dealId: string; 
       <Field label={`Live post link for ${label}`}>
         <Input type="url" required placeholder="https://www.instagram.com/reel/…" value={postUrl} onChange={(e) => setPostUrl(e.target.value)} />
       </Field>
+      <Field label="Screenshots (optional, up to 5)" hint="Reach or insights for the post help the brand review it faster.">
+        <input
+          type="file"
+          multiple
+          accept="image/jpeg,image/png,image/webp"
+          className="text-sm"
+          onChange={(e) => setShots(Array.from(e.target.files ?? []).slice(0, 5))}
+        />
+      </Field>
+      {shots.length > 0 && <p className="text-xs text-zinc-600">{shots.map((f) => f.name).join(", ")}</p>}
       <Field label="Notes (optional)">
         <Textarea className="min-h-20" maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>

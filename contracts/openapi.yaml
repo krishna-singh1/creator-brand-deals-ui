@@ -3180,6 +3180,12 @@ components:
         screenshotFileIds:
           type: array
           items: { type: string, format: uuid }
+        screenshots:
+          type: array
+          description: >
+            Short-lived links to the screenshots (same order as screenshotFileIds), for the deal's brand and creator.
+            Links expire (see expiresAt); fetch the deal again for fresh ones.
+          items: { $ref: '#/components/schemas/FileUrl' }
         notes: { type: string }
         disclosureConfirmed: { type: boolean }
         reviewStatus: { $ref: '#/components/schemas/SubmissionReviewStatus' }
