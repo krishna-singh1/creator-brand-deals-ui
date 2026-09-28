@@ -1990,6 +1990,76 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /admin/brands:
+    get:
+      tags: [admin]
+      operationId: adminListBrands
+      summary: Brands, waiting for verification first (oldest first)
+      parameters:
+        - name: verification
+          in: query
+          schema: { $ref: '#/components/schemas/BrandVerificationStatus' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of brands
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BrandProfilePage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/brands/{brandId}/verify:
+    post:
+      tags: [admin]
+      operationId: adminVerifyBrand
+      summary: Verify a brand (PENDING → VERIFIED); the brand is notified. Audited.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/BrandId'
+      responses:
+        '200':
+          description: Verified
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BrandProfile' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /admin/brands/{brandId}/reject:
+    post:
+      tags: [admin]
+      operationId: adminRejectBrand
+      summary: Reject a brand's verification with a note (PENDING → REJECTED); the brand is notified. Audited.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/BrandId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BrandProfile' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /admin/pricing/rate-table:
     get:
       tags: [admin]
@@ -2115,6 +2185,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    BrandId:
+      name: brandId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     DealId:
       name: dealId
       in: path
@@ -2224,6 +2299,7 @@ components:
         - CONSENT_REQUIRED
         - PROFILE_INCOMPLETE
         - CREATOR_NOT_VERIFIED
+        - BRAND_NOT_VERIFIED
         - CREATOR_UNDERAGE
         - VERIFICATION_ALREADY_PENDING
         - CATEGORY_LIMIT_EXCEEDED
@@ -2799,6 +2875,21 @@ components:
               items: { $ref: '#/components/schemas/RateCardEntry' }
 
     # ─────────── brand ───────────
+    BrandVerificationStatus:
+      type: string
+      description: >
+        UNSUBMITTED until the profile is complete, then PENDING until an admin reviews it. Only VERIFIED brands can
+        publish campaigns or invite creators (403 BRAND_NOT_VERIFIED). A REJECTED brand goes back to PENDING when it
+        updates its profile.
+      enum: [UNSUBMITTED, PENDING, VERIFIED, REJECTED]
+    BrandProfilePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/BrandProfile' }
+        nextCursor: { type: string }
     BrandProfile:
       type: object
       required: [id, status]
@@ -2824,6 +2915,12 @@ components:
         missingFields:
           type: array
           items: { type: string }
+        verificationStatus: { $ref: '#/components/schemas/BrandVerificationStatus' }
+        verificationNote:
+          type: string
+          description: Why an admin couldn't verify the brand (when REJECTED)
+        verificationRequestedAt: { type: string, format: date-time }
+        verifiedAt: { type: string, format: date-time }
     UpdateBrandProfileRequest:
       type: object
       required: [brandName, categoryId, contactName, contactPhone, contactEmail]

@@ -165,6 +165,7 @@ const BADGE_STYLES: Record<string, string> = {
   ACTIVE: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   COMPLETED: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   CANCELLED: "bg-red-50 text-red-700 ring-red-200",
+  UNSUBMITTED: "bg-zinc-100 text-zinc-600 ring-zinc-200",
   UNPUBLISHED_BY_ADMIN: "bg-red-50 text-red-700 ring-red-200",
   DELETED: "bg-zinc-100 text-zinc-500 ring-zinc-200",
 };

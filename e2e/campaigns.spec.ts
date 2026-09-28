@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { createVerifiedCreator } from "./api-fixtures";
+import { ADMIN_STATE, createVerifiedCreator } from "./api-fixtures";
 import { signInWithPassword, signUp } from "./helpers";
 
 test("brand publishes a campaign; a verified creator applies; the brand approves into a deal", async ({ browser }) => {
@@ -11,7 +11,8 @@ test("brand publishes a campaign; a verified creator applies; the brand approves
   const brand = await (await browser.newContext()).newPage();
   await signUp(brand, `e2e-cbrand-${Date.now()}@example.com`, "brand");
   await brand.goto("/brand/profile");
-  await brand.getByLabel("Brand name").fill("Chai Point Co");
+  const brandName = `Chai Point ${Date.now().toString(36)}`;
+  await brand.getByLabel("Brand name").fill(brandName);
   await brand.getByLabel("Category").selectOption({ label: "Food" });
   await brand.getByLabel("Contact person").fill("Kabir");
   await brand.getByLabel("Contact phone").fill("+919812300001");
@@ -33,6 +34,23 @@ test("brand publishes a campaign; a verified creator applies; the brand approves
   await brand.getByRole("button", { name: "Save draft" }).click();
 
   await expect(brand.getByRole("heading", { name: title })).toBeVisible();
+
+  // New brands wait for BrandDeal to verify them before publishing.
+  await expect(brand.getByText("We're verifying your brand")).toBeVisible();
+  await expect(brand.getByRole("button", { name: "Publish campaign" })).toBeDisabled();
+  const admin = await (await browser.newContext({ storageState: ADMIN_STATE })).newPage();
+  await admin.goto("/admin/brands");
+  const brandCard = admin
+    .locator("div")
+    .filter({ has: admin.getByText(brandName, { exact: true }) })
+    .filter({ has: admin.getByRole("button", { name: "Verify brand" }) })
+    .last();
+  await brandCard.getByRole("button", { name: "Verify brand" }).click();
+  await expect(admin.getByText(brandName, { exact: true })).toBeHidden();
+  await admin.close();
+
+  await brand.reload();
+  await expect(brand.getByText("We're verifying your brand")).toBeHidden();
   await brand.getByRole("button", { name: "Publish campaign" }).click();
   await expect(brand.getByText("Live for verified creators")).toBeVisible();
 
@@ -97,7 +115,7 @@ test("brand publishes a campaign; a verified creator applies; the brand approves
   // ── Creator sees the result ──
   await creator.reload();
   await expect(creator.getByText("Approved. Your deal is ready.")).toBeVisible();
-  await creator.getByRole("link", { name: "Deals", exact: true }).click();
+  await creator.goto("/deals");
   await creator.getByRole("link").filter({ hasText: title }).click();
   await expect(creator.getByText("Time to create")).toBeVisible();
   await expect(creator.getByRole("button", { name: /Notifications, \d+ unread/ })).toBeVisible({ timeout: 15_000 });

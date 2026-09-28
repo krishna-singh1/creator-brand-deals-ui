@@ -89,4 +89,6 @@ test("brand completes profile with logo", async ({ page }) => {
   await expect(page.getByText("Saved.")).toBeVisible();
   await page.getByRole("link", { name: "Home" }).click();
   await expect(page.getByRole("link", { name: "Post your first campaign" })).toBeVisible();
+  // A complete profile goes to BrandDeal for verification.
+  await expect(page.getByText("We're verifying your brand")).toBeVisible();
 });

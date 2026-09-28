@@ -1,0 +1,41 @@
+"use client";
+
+import Link from "next/link";
+
+import { Card } from "@/components/ui";
+import { type BrandProfile, useBrandProfile } from "@/lib/brand";
+
+const COPY: Record<string, { title: string; body: (p: BrandProfile) => string; cta?: string }> = {
+  UNSUBMITTED: {
+    title: "Complete your profile to get verified",
+    body: () => "BrandDeal checks every brand before its campaigns go live. Finish your profile and we'll review it.",
+    cta: "Complete profile",
+  },
+  PENDING: {
+    title: "We're verifying your brand",
+    body: () => "Usually within one business day. You can draft campaigns meanwhile; publishing and invites unlock once you're verified.",
+  },
+  REJECTED: {
+    title: "We couldn't verify your brand yet",
+    body: (p) => `${p.verificationNote ?? "Please check your profile details."} Update your profile and it goes back to our team.`,
+    cta: "Update profile",
+  },
+};
+
+/** Shown to brands until an admin verifies them (nothing once verified). */
+export function BrandVerificationNotice() {
+  const { data } = useBrandProfile();
+  const copy = data?.verificationStatus ? COPY[data.verificationStatus] : undefined;
+  if (!data || !copy) return null;
+  return (
+    <Card tone={data.verificationStatus === "REJECTED" ? "warning" : "highlight"}>
+      <p className="font-display text-2xl text-ink">{copy.title}</p>
+      <p className="mt-1 text-sm text-zinc-700">{copy.body(data)}</p>
+      {copy.cta && (
+        <Link href="/brand/profile" className="link-underline mt-3 inline-block text-sm font-medium text-ink">
+          {copy.cta} →
+        </Link>
+      )}
+    </Card>
+  );
+}
