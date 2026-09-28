@@ -577,7 +577,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Discover verified creators */
+        /**
+         * Discover verified creators
+         * @description Verified creators only, biggest audience first. Follower and engagement filters apply to the creator's account on `platform` (any account when not given), using BrandDeal-verified numbers where available. `q` matches the display name or a handle.
+         */
         get: operations["searchCreators"];
         put?: never;
         post?: never;
@@ -594,7 +597,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Creator profile as seen by brands (no contact details) */
+        /**
+         * Creator profile as seen by brands (no contact details)
+         * @description Verified creators only (others are 404).
+         */
         get: operations["getCreatorForBrand"];
         put?: never;
         post?: never;
@@ -789,7 +795,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Invite a creator to a campaign */
+        /**
+         * Invite a creator to a campaign
+         * @description The campaign must be the brand's own and open (PUBLISHED, apply-by not passed, not filled: 409 CAMPAIGN_NOT_OPEN / CAMPAIGN_FILLED). The creator must be verified (404 otherwise). One application per creator per campaign, so an existing application or invite is 409 APPLICATION_ALREADY_EXISTS. The creator gets an INVITE_RECEIVED notification and email. Invites expire with the campaign.
+         */
         post: operations["inviteCreator"];
         delete?: never;
         options?: never;
@@ -874,7 +883,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Creator accepts an invite by submitting a pitch and quote */
+        /**
+         * Creator accepts an invite by submitting a pitch and quote
+         * @description Same pitch and quote rules as applying, but the campaign's audience filters are skipped (the brand chose this creator). The campaign must still be open. INVITED → APPLIED; the brand is notified as for a new applicant.
+         */
         post: operations["acceptInvite"];
         delete?: never;
         options?: never;
@@ -891,7 +903,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Creator declines an invite */
+        /**
+         * Creator declines an invite
+         * @description INVITED → DECLINED. The brand gets a notification.
+         */
         post: operations["declineInvite"];
         delete?: never;
         options?: never;
@@ -2001,6 +2016,8 @@ export interface components {
             status: components["schemas"]["ApplicationStatus"];
             origin: components["schemas"]["ApplicationOrigin"];
             pitch?: string;
+            /** @description The brand's note, for invites */
+            inviteMessage?: string;
             quote: components["schemas"]["QuoteLine"][];
             quotedTotalPaise: components["schemas"]["Paise"];
             suggestedTotal?: components["schemas"]["PriceRange"];
@@ -3572,7 +3589,6 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
-            501: components["responses"]["NotImplemented"];
         };
     };
     getCreatorForBrand: {
@@ -4021,10 +4037,11 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["Unprocessable"];
             429: components["responses"]["TooManyRequests"];
-            501: components["responses"]["NotImplemented"];
         };
     };
     withdrawApplication: {
@@ -4186,10 +4203,11 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["Unprocessable"];
             429: components["responses"]["TooManyRequests"];
-            501: components["responses"]["NotImplemented"];
         };
     };
     declineInvite: {
@@ -4216,10 +4234,10 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             429: components["responses"]["TooManyRequests"];
-            501: components["responses"]["NotImplemented"];
         };
     };
     listMyDeals: {

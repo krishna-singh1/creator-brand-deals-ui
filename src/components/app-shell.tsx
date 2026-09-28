@@ -24,6 +24,7 @@ const NAV: Record<string, NavItem[]> = {
   BRAND: [
     { href: "/brand", label: "Home" },
     { href: "/brand/campaigns", label: "Campaigns" },
+    { href: "/brand/creators", label: "Creators" },
     { href: "/deals", label: "Deals" },
   ],
   ADMIN: [{ href: "/admin", label: "Admin" }],

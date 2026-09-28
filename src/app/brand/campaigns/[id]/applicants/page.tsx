@@ -66,6 +66,8 @@ function Applicants({ campaignId }: { campaignId: string }) {
           <option value="SHORTLISTED">Shortlisted</option>
           <option value="APPROVED">Approved</option>
           <option value="REJECTED">Rejected</option>
+          <option value="INVITED">Invited, no reply yet</option>
+          <option value="DECLINED">Declined invites</option>
         </Select>
         <Select className="ml-auto w-52" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
           <option value="MATCH">Best match</option>
@@ -159,24 +161,31 @@ function ApplicantCard({ applicant: a, campaignId, paid }: { applicant: Applican
 
       {a.pitch && <p className="whitespace-pre-line text-[15px] leading-relaxed text-zinc-700">{a.pitch}</p>}
 
-      <div className="grid gap-3 rounded-2xl bg-cream/60 p-4 text-sm sm:grid-cols-[1fr_auto]">
-        <ul className="flex flex-col gap-1">
-          {a.quote.map((q) => (
-            <li key={q.deliverableType} className="text-zinc-700">
-              {q.quantity} × {DELIVERABLE_LABELS[q.deliverableType]} at {formatPaise(q.unitPricePaise)}
-            </li>
-          ))}
-        </ul>
-        <div className="flex flex-col items-end gap-1">
-          <span className="font-display text-2xl text-ink">{formatPaise(a.quotedTotalPaise)}</span>
-          {a.suggestedTotal && (
-            <span className="text-xs text-zinc-500">
-              Market rate {formatPaise(a.suggestedTotal.minPaise)}–{formatPaise(a.suggestedTotal.maxPaise)}
-            </span>
-          )}
-          {a.overBudget && <span className="text-xs font-medium text-amber-800">Above your budget</span>}
+      {a.status === "INVITED" || a.status === "DECLINED" ? (
+        <p className="rounded-2xl bg-cream/60 p-4 text-sm text-zinc-700">
+          {a.status === "INVITED" ? "You invited them. Waiting for their pitch and quote." : "They declined your invite."}
+          {a.inviteMessage ? ` Your note: “${a.inviteMessage}”` : ""}
+        </p>
+      ) : (
+        <div className="grid gap-3 rounded-2xl bg-cream/60 p-4 text-sm sm:grid-cols-[1fr_auto]">
+          <ul className="flex flex-col gap-1">
+            {a.quote.map((q) => (
+              <li key={q.deliverableType} className="text-zinc-700">
+                {q.quantity} × {DELIVERABLE_LABELS[q.deliverableType]} at {formatPaise(q.unitPricePaise)}
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-col items-end gap-1">
+            <span className="font-display text-2xl text-ink">{formatPaise(a.quotedTotalPaise)}</span>
+            {a.suggestedTotal && (
+              <span className="text-xs text-zinc-500">
+                Market rate {formatPaise(a.suggestedTotal.minPaise)}–{formatPaise(a.suggestedTotal.maxPaise)}
+              </span>
+            )}
+            {a.overBudget && <span className="text-xs font-medium text-amber-800">Above your budget</span>}
+          </div>
         </div>
-      </div>
+      )}
 
       {a.decisionReason && <p className="text-sm text-zinc-600">Your note: {a.decisionReason}</p>}
       {a.status === "APPROVED" && a.dealId && (

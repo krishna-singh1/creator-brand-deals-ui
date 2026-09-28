@@ -850,7 +850,10 @@ paths:
       tags: [brand]
       operationId: searchCreators
       summary: Discover verified creators
-      x-priority: P1
+      description: >
+        Verified creators only, biggest audience first. Follower and engagement filters apply to the creator's account on
+        `platform` (any account when not given), using BrandDeal-verified numbers where available. `q` matches the display
+        name or a handle.
       parameters:
         - name: categoryId
           in: query
@@ -884,13 +887,13 @@ paths:
               schema: { $ref: '#/components/schemas/CreatorCardPage' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
 
   /brand/creators/{creatorId}:
     get:
       tags: [brand]
       operationId: getCreatorForBrand
       summary: Creator profile as seen by brands (no contact details)
+      description: Verified creators only (others are 404).
       parameters:
         - $ref: '#/components/parameters/CreatorId'
       responses:
@@ -1206,7 +1209,11 @@ paths:
       tags: [application]
       operationId: inviteCreator
       summary: Invite a creator to a campaign
-      x-priority: P1
+      description: >
+        The campaign must be the brand's own and open (PUBLISHED, apply-by not passed, not filled: 409 CAMPAIGN_NOT_OPEN /
+        CAMPAIGN_FILLED). The creator must be verified (404 otherwise). One application per creator per campaign, so an
+        existing application or invite is 409 APPLICATION_ALREADY_EXISTS. The creator gets an INVITE_RECEIVED notification
+        and email. Invites expire with the campaign.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/CampaignId'
@@ -1224,7 +1231,8 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /applications/{applicationId}/withdraw:
@@ -1325,7 +1333,9 @@ paths:
       tags: [application]
       operationId: acceptInvite
       summary: Creator accepts an invite by submitting a pitch and quote
-      x-priority: P1
+      description: >
+        Same pitch and quote rules as applying, but the campaign's audience filters are skipped (the brand chose this
+        creator). The campaign must still be open. INVITED → APPLIED; the brand is notified as for a new applicant.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/ApplicationId'
@@ -1343,7 +1353,8 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /applications/{applicationId}/decline-invite:
@@ -1351,7 +1362,7 @@ paths:
       tags: [application]
       operationId: declineInvite
       summary: Creator declines an invite
-      x-priority: P1
+      description: INVITED → DECLINED. The brand gets a notification.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/ApplicationId'
@@ -1364,7 +1375,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
   # ───────────────────────────── deal ─────────────────────────────
@@ -3046,6 +3057,9 @@ components:
         status: { $ref: '#/components/schemas/ApplicationStatus' }
         origin: { $ref: '#/components/schemas/ApplicationOrigin' }
         pitch: { type: string }
+        inviteMessage:
+          type: string
+          description: The brand's note, for invites
         quote:
           type: array
           items: { $ref: '#/components/schemas/QuoteLine' }

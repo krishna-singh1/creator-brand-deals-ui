@@ -13,7 +13,10 @@ import { DELIVERABLE_LABELS, formatPaise, rupeesToPaise } from "@/lib/format";
 
 const MIN_PITCH = 50;
 
-/** Apply with a pitch and a per-deliverable quote, or show the existing application with a withdraw action. */
+/**
+ * Apply with a pitch and a per-deliverable quote, or show the existing application with a withdraw action. An invite
+ * from the brand shows their note and the same form (sent as an acceptance, without the audience filters) plus decline.
+ */
 export function ApplyPanel({ data }: { data: CampaignForCreator }) {
   const queryClient = useQueryClient();
   const refresh = () => {
@@ -23,6 +26,9 @@ export function ApplyPanel({ data }: { data: CampaignForCreator }) {
     queryClient.invalidateQueries({ queryKey: ["creator", "dashboard"] });
   };
 
+  if (data.myApplication?.status === "INVITED") {
+    return <InviteCard data={data} invite={data.myApplication} onChange={refresh} />;
+  }
   if (data.myApplication) {
     return <ApplicationStatusCard application={data.myApplication} onChange={refresh} />;
   }
@@ -44,7 +50,36 @@ export function ApplyPanel({ data }: { data: CampaignForCreator }) {
   return <ApplyForm data={data} onApplied={refresh} />;
 }
 
-function ApplyForm({ data, onApplied }: { data: CampaignForCreator; onApplied: () => void }) {
+function InviteCard({ data, invite, onChange }: { data: CampaignForCreator; invite: Application; onChange: () => void }) {
+  const decline = useMutation({
+    mutationFn: () => unwrap(api.POST("/applications/{applicationId}/decline-invite", { params: { path: { applicationId: invite.id } } })),
+    onSuccess: onChange,
+  });
+  return (
+    <div className="flex flex-col gap-4">
+      <Card tone="highlight">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-display text-2xl text-ink">{data.campaign.brand.brandName} invited you</p>
+          <StatusBadge status="INVITED" />
+        </div>
+        {invite.inviteMessage && <p className="mt-2 whitespace-pre-line text-sm text-zinc-700">&ldquo;{invite.inviteMessage}&rdquo;</p>}
+        <p className="mt-2 text-sm text-zinc-600">Send your pitch and quote below to join, or decline if it isn&apos;t for you.</p>
+        <ErrorText>{decline.isError && errorMessage(decline.error)}</ErrorText>
+        <Button
+          variant="ghost"
+          className="mt-3"
+          disabled={decline.isPending}
+          onClick={() => window.confirm("Decline this invite? The brand will be told.") && decline.mutate()}
+        >
+          Decline invite
+        </Button>
+      </Card>
+      <ApplyForm data={data} onApplied={onChange} inviteId={invite.id} />
+    </div>
+  );
+}
+
+function ApplyForm({ data, onApplied, inviteId }: { data: CampaignForCreator; onApplied: () => void; inviteId?: string }) {
   const barter = data.campaign.compensationType === "PRODUCT";
   const [pitch, setPitch] = useState("");
   const [available, setAvailable] = useState(false);
@@ -65,13 +100,12 @@ function ApplyForm({ data, onApplied }: { data: CampaignForCreator; onApplied: (
   const budget = data.campaign.budgetMaxPaise ?? data.campaign.budgetMinPaise;
 
   const apply = useMutation({
-    mutationFn: () =>
-      unwrap(
-        api.POST("/campaigns/{campaignId}/applications", {
-          params: { path: { campaignId: data.campaign.id } },
-          body: { pitch, quote, availabilityConfirmed: true },
-        }),
-      ),
+    mutationFn: () => {
+      const body = { pitch, quote, availabilityConfirmed: true as const };
+      return inviteId
+        ? unwrap(api.POST("/applications/{applicationId}/accept-invite", { params: { path: { applicationId: inviteId } }, body }))
+        : unwrap(api.POST("/campaigns/{campaignId}/applications", { params: { path: { campaignId: data.campaign.id } }, body }));
+    },
     onSuccess: onApplied,
   });
 
@@ -85,7 +119,7 @@ function ApplyForm({ data, onApplied }: { data: CampaignForCreator; onApplied: (
         }}
       >
         <div>
-          <p className="font-display text-2xl text-ink">Apply to this brief</p>
+          <p className="font-display text-2xl text-ink">{inviteId ? "Accept with your pitch" : "Apply to this brief"}</p>
           <p className="mt-1 text-sm text-zinc-600">Tell the brand why you&apos;re the right creator, and name your price.</p>
         </div>
         <Field label="Your pitch" hint={`Your idea, your audience, why it fits. ${pitch.trim().length} characters (${MIN_PITCH} minimum).`}>
@@ -127,7 +161,7 @@ function ApplyForm({ data, onApplied }: { data: CampaignForCreator; onApplied: (
               <Spinner /> Sending…
             </>
           ) : (
-            "Send application"
+            inviteId ? "Accept invite and send" : "Send application"
           )}
         </Button>
       </form>

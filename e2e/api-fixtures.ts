@@ -117,7 +117,8 @@ export async function createVerifiedCreator(displayName: string): Promise<string
  * A cash deal ready for content: a brand with a complete profile publishes a 1-reel campaign, a verified creator
  * applies quoting ₹5,000 and the brand approves. Sign in to both with TEST_PASSWORD.
  */
-export async function createApprovedDeal(title: string) {
+/** A brand with a complete profile and one published cash campaign (IG Reel, 10K–50K followers). */
+export async function createBrandWithCampaign(title: string) {
   const brandEmail = `e2e-db-${Date.now()}-${Math.floor(Math.random() * 1e4)}@example.com`;
   const brand = await apiSession(brandEmail);
   expect((await brand.post("me/role", { data: { role: "BRAND" } })).ok()).toBe(true);
@@ -154,7 +155,14 @@ export async function createApprovedDeal(title: string) {
     })
   ).json();
   expect((await brand.post(`campaigns/${campaign.id}/publish`)).ok()).toBe(true);
+  await brand.dispose();
+  return { brandEmail, campaignId: campaign.id as string };
+}
 
+export async function createApprovedDeal(title: string) {
+  const { brandEmail, campaignId } = await createBrandWithCampaign(title);
+  const brand = await apiSession(brandEmail);
+  const campaign = { id: campaignId };
   const creatorEmail = await createVerifiedCreator("Kavya Creates");
   const creator = await apiSession(creatorEmail);
   const application = await creator.post(`campaigns/${campaign.id}/applications`, {

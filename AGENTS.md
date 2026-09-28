@@ -72,7 +72,7 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 - `src/lib/upload.ts`: presign → direct PUT to storage → fileId (ADR 0006)
 - `src/app/creator/profile`, `src/app/creator/verification`, `src/app/brand/profile`, `src/app/admin`: M2 screens
 - `src/app/brand/campaigns` (incl. `[id]/applicants`), `src/app/creator/campaigns` (incl. the apply panel),
-  `src/app/creator/applications`, `src/app/deals` (shared by both roles; `[id]/messages-panel.tsx` is the polling message thread): M3–M5 screens; `src/app/admin` (M6): `admin-shell.tsx` (guard + section tabs) and `admin-bits.tsx` (paged list hook, table, reason-required actions) shared by overview, verifications, users, campaigns, deals, pricing and audit pages; `src/components/notification-bell.tsx` in the app shell; shared pieces in
+  `src/app/brand/creators` (discover verified creators; `[id]` profile + invite panel), `src/app/creator/applications`, `src/app/deals` (shared by both roles; `[id]/messages-panel.tsx` is the polling message thread): M3–M5 screens; `src/app/admin` (M6): `admin-shell.tsx` (guard + section tabs) and `admin-bits.tsx` (paged list hook, table, reason-required actions) shared by overview, verifications, users, campaigns, deals, pricing and audit pages; `src/components/notification-bell.tsx` in the app shell; shared pieces in
   `src/components/campaign-brief.tsx`, `src/components/campaign-bits.tsx` and `src/lib/campaigns.ts`
 - `e2e/`: Playwright specs against the running web + API (`helpers.ts`: UI sign-in/sign-up/OTP helpers;
   `api-fixtures.ts`: API-level setup such as a verified creator or an approved deal; `global-setup.ts` signs the
