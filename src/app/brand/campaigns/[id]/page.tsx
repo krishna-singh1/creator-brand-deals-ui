@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { use } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { BrandVerificationNotice } from "@/components/brand-verification-notice";
 import { CampaignBrief } from "@/components/campaign-brief";
 import { CompensationBadge } from "@/components/campaign-bits";
 import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Button, ErrorText, PageTitle, StatusBadge } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
+import { isVerified, useBrandProfile } from "@/lib/brand";
 import { formatDeadline } from "@/lib/campaigns";
 import { errorMessage } from "@/lib/errors";
 
@@ -35,6 +37,7 @@ function Detail({ id }: { id: string }) {
     queryKey: key,
     queryFn: () => unwrap(api.GET("/campaigns/{campaignId}", { params: { path: { campaignId: id } } })),
   });
+  const { data: brand } = useBrandProfile();
   const path = { params: { path: { campaignId: id } } };
   const refresh = (updated?: unknown) => {
     if (updated) queryClient.setQueryData(key, updated);
@@ -61,6 +64,7 @@ function Detail({ id }: { id: string }) {
   });
 
   if (!c) return <ContentSkeleton />;
+  const verified = isVerified(brand);
   const error = [publish, close, remove, reopen].find((m) => m.isError)?.error;
   const finished = c.status === "CLOSED" || c.status === "ARCHIVED";
 
@@ -76,10 +80,15 @@ function Detail({ id }: { id: string }) {
         </div>
       </PageTitle>
 
+      {c.status === "DRAFT" && !verified && brand && <BrandVerificationNotice />}
       <div className="flex flex-wrap items-center gap-3">
         {c.status === "DRAFT" && (
           <>
-            <Button onClick={() => publish.mutate()} disabled={publish.isPending}>
+            <Button
+              onClick={() => publish.mutate()}
+              disabled={publish.isPending || !verified}
+              title={verified ? undefined : "Publishing unlocks once BrandDeal verifies your brand"}
+            >
               {publish.isPending ? "Publishing…" : "Publish campaign"}
             </Button>
             <Link

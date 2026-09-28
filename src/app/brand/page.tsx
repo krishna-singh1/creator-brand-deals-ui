@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { ActionItems } from "@/components/action-items";
+import { BrandVerificationNotice } from "@/components/brand-verification-notice";
 import { AppShell } from "@/components/app-shell";
 import { RequireSession } from "@/components/require-session";
 import { PageTitle, Skeleton } from "@/components/ui";
@@ -29,6 +30,7 @@ function Dashboard({ name }: { name?: string }) {
         title={name ? `Welcome, ${name}` : "Welcome to BrandDeal"}
         subtitle="Shape your brand presence, then brief verified creators who genuinely belong in your world."
       />
+      <BrandVerificationNotice />
       {data ? <ActionItems items={data.actionItems} emptyText="You're all set." /> : <Skeleton className="h-48" />}
     </div>
   );

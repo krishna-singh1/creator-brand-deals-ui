@@ -35,6 +35,14 @@ async function adminSession(): Promise<APIRequestContext> {
   });
 }
 
+/** An admin verifies the brand (new brands can't publish until then). */
+export async function verifyBrand(brandId: string) {
+  const admin = await adminSession();
+  const verified = await admin.post(`admin/brands/${brandId}/verify`);
+  expect(verified.ok(), await verified.text()).toBe(true);
+  await admin.dispose();
+}
+
 /** Signs in with an email code (never tries or changes a password); retries on the resend cooldown. */
 export async function signInWithCode(api: APIRequestContext, email: string) {
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -133,6 +141,7 @@ export async function createBrandWithCampaign(title: string) {
     },
   });
   expect(profile.ok(), await profile.text()).toBe(true);
+  await verifyBrand((await profile.json()).id);
   const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
   const campaign = await (
     await brand.post("campaigns", {

@@ -9,6 +9,7 @@ import { RequireSession } from "@/components/require-session";
 const TABS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/verifications", label: "Verifications" },
+  { href: "/admin/brands", label: "Brands" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/campaigns", label: "Campaigns" },
   { href: "/admin/deals", label: "Deals" },

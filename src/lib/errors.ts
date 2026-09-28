@@ -16,6 +16,7 @@ const MESSAGES: Partial<Record<string, string>> = {
   FILE_TYPE_NOT_ALLOWED: "That file type isn't allowed here.",
   FILE_TOO_LARGE: "That file is too large (images up to 5 MB).",
   FILE_NOT_UPLOADED: "The upload didn't finish. Please upload the file again.",
+  BRAND_NOT_VERIFIED: "BrandDeal is still verifying your brand. Publishing and invites unlock once you're verified.",
 };
 
 const REASONS: Partial<Record<string, string>> = {

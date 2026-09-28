@@ -1406,6 +1406,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Brands, waiting for verification first (oldest first) */
+        get: operations["adminListBrands"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/brands/{brandId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify a brand (PENDING → VERIFIED); the brand is notified. Audited. */
+        post: operations["adminVerifyBrand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/brands/{brandId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a brand's verification with a note (PENDING → REJECTED); the brand is notified. Audited. */
+        post: operations["adminRejectBrand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/pricing/rate-table": {
         parameters: {
             query?: never;
@@ -1463,7 +1514,7 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {string} */
-        ErrorCode: "MALFORMED_REQUEST" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INVALID_STATE_TRANSITION" | "RATE_LIMITED" | "INTERNAL_ERROR" | "NOT_IMPLEMENTED" | "INVALID_CREDENTIALS" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_TOO_MANY_ATTEMPTS" | "GOOGLE_TOKEN_INVALID" | "REFRESH_TOKEN_INVALID" | "ACCOUNT_SUSPENDED" | "ROLE_NOT_SELECTED" | "ROLE_ALREADY_SET" | "CONSENT_REQUIRED" | "PROFILE_INCOMPLETE" | "CREATOR_NOT_VERIFIED" | "CREATOR_UNDERAGE" | "VERIFICATION_ALREADY_PENDING" | "CATEGORY_LIMIT_EXCEEDED" | "CREATOR_NOT_ELIGIBLE" | "APPLICATION_ALREADY_EXISTS" | "CAMPAIGN_NOT_OPEN" | "CAMPAIGN_FILLED" | "DISCLOSURE_REQUIRED" | "REVIEW_ALREADY_EXISTS" | "FILE_TYPE_NOT_ALLOWED" | "FILE_TOO_LARGE" | "FILE_NOT_UPLOADED";
+        ErrorCode: "MALFORMED_REQUEST" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INVALID_STATE_TRANSITION" | "RATE_LIMITED" | "INTERNAL_ERROR" | "NOT_IMPLEMENTED" | "INVALID_CREDENTIALS" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_TOO_MANY_ATTEMPTS" | "GOOGLE_TOKEN_INVALID" | "REFRESH_TOKEN_INVALID" | "ACCOUNT_SUSPENDED" | "ROLE_NOT_SELECTED" | "ROLE_ALREADY_SET" | "CONSENT_REQUIRED" | "PROFILE_INCOMPLETE" | "CREATOR_NOT_VERIFIED" | "BRAND_NOT_VERIFIED" | "CREATOR_UNDERAGE" | "VERIFICATION_ALREADY_PENDING" | "CATEGORY_LIMIT_EXCEEDED" | "CREATOR_NOT_ELIGIBLE" | "APPLICATION_ALREADY_EXISTS" | "CAMPAIGN_NOT_OPEN" | "CAMPAIGN_FILLED" | "DISCLOSURE_REQUIRED" | "REVIEW_ALREADY_EXISTS" | "FILE_TYPE_NOT_ALLOWED" | "FILE_TOO_LARGE" | "FILE_NOT_UPLOADED";
         ErrorResponse: {
             error: {
                 code: components["schemas"]["ErrorCode"];
@@ -1863,6 +1914,15 @@ export interface components {
             portfolio: components["schemas"]["PortfolioItem"][];
             rateCard?: components["schemas"]["RateCardEntry"][];
         };
+        /**
+         * @description UNSUBMITTED until the profile is complete, then PENDING until an admin reviews it. Only VERIFIED brands can publish campaigns or invite creators (403 BRAND_NOT_VERIFIED). A REJECTED brand goes back to PENDING when it updates its profile.
+         * @enum {string}
+         */
+        BrandVerificationStatus: "UNSUBMITTED" | "PENDING" | "VERIFIED" | "REJECTED";
+        BrandProfilePage: {
+            items: components["schemas"]["BrandProfile"][];
+            nextCursor?: string;
+        };
         BrandProfile: {
             /** Format: uuid */
             id: string;
@@ -1888,6 +1948,13 @@ export interface components {
             dealsCompleted?: number;
             paymentsConfirmedPercent?: number;
             missingFields?: string[];
+            verificationStatus?: components["schemas"]["BrandVerificationStatus"];
+            /** @description Why an admin couldn't verify the brand (when REJECTED) */
+            verificationNote?: string;
+            /** Format: date-time */
+            verificationRequestedAt?: string;
+            /** Format: date-time */
+            verifiedAt?: string;
         };
         UpdateBrandProfileRequest: {
             brandName: string;
@@ -2554,6 +2621,7 @@ export interface components {
         Limit: number;
         CampaignId: string;
         ApplicationId: string;
+        BrandId: string;
         DealId: string;
         DisputeId: string;
         SubmissionId: string;
@@ -5191,6 +5259,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminDispute"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    adminListBrands: {
+        parameters: {
+            query?: {
+                verification?: components["schemas"]["BrandVerificationStatus"];
+                /** @description Opaque cursor from a previous page's `nextCursor` */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of brands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandProfilePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    adminVerifyBrand: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                brandId: components["parameters"]["BrandId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Verified */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandProfile"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    adminRejectBrand: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                brandId: components["parameters"]["BrandId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandProfile"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
