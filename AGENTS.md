@@ -53,7 +53,7 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 - Type: `font-display` = Playfair Display (headings, numbers, quotes), `font-sans` = Inter (body). Eyebrows are small
   uppercase gold text with wide tracking (`<Eyebrow>`).
 - Primitives in `src/components/ui.tsx`: `Button` (primary/gold/secondary/ghost/danger, pill, hover lift), `Input`/`Select`/
-  `Textarea` (gold focus ring), `Field`, `Card` (`interactive` lifts), `PageTitle`, `SectionTitle`, `StatusBadge`,
+  `Textarea` (gold focus ring), `Field`, `Switch` (accessible on/off, `role="switch"`), `Card` (`interactive` lifts), `PageTitle`, `SectionTitle`, `StatusBadge`,
   `Spinner`, `Skeleton`.
 - Motion in `src/components/motion.tsx` (no animation library): `Reveal` (scroll reveal via IntersectionObserver,
   `delay` to stagger), `Counter`, `Parallax`, `AnimatedWords`, `useScrolled`. CSS keyframes: `animate-fade-up`,
