@@ -96,7 +96,11 @@ function toInput(f: FormState): CampaignInput {
 }
 
 /** Brief editor for new and draft campaigns. Saving keeps it as a draft; publishing happens on the detail page. */
+/** Live campaigns lock what creators applied against (the API enforces the same rules). */
+const LOCKED_NOTE = "Locked while the campaign is live, because creators applied against it.";
+
 export function CampaignForm({ campaign }: { campaign?: Campaign }) {
+  const live = campaign?.status === "PUBLISHED";
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: categories = [] } = useCategories();
@@ -156,19 +160,21 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
               <Input type="url" maxLength={500} placeholder="https://" value={f.productUrl} onChange={(e) => set("productUrl", e.target.value)} />
             </Field>
           </div>
-          <Chips label="Niches (up to 3)">
-            {categories.map((c) => (
-              <Chip key={c.id} on={f.categoryIds.includes(c.id)} onClick={() => toggle("categoryIds", c.id, 3)}>
-                {c.name}
-              </Chip>
-            ))}
-          </Chips>
+          <fieldset disabled={live} className="contents">
+            <Chips label={live ? "Niches (locked while live)" : "Niches (up to 3)"}>
+              {categories.map((c) => (
+                <Chip key={c.id} on={f.categoryIds.includes(c.id)} onClick={() => toggle("categoryIds", c.id, 3)}>
+                  {c.name}
+                </Chip>
+              ))}
+            </Chips>
+          </fieldset>
         </div>
       </Card>
 
       <Card>
-        <SectionTitle title="Deliverables" subtitle="Choose the platform and how many of each piece you need per creator." />
-        <div className="flex flex-col gap-5">
+        <SectionTitle title="Deliverables" subtitle={live ? LOCKED_NOTE : "Choose the platform and how many of each piece you need per creator."} />
+        <fieldset disabled={live} className="flex flex-col gap-5 disabled:opacity-60">
           <div className="flex gap-2">
             {(Object.keys(PLATFORM_LABELS) as Platform[]).map((p) => (
               <Chip
@@ -198,11 +204,12 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
               );
             })}
           </div>
-        </div>
+        </fieldset>
       </Card>
 
       <Card>
-        <SectionTitle title="Compensation" subtitle="Per creator. Barter works best when the product's value matches the work." />
+        <SectionTitle title="Compensation" subtitle={live ? LOCKED_NOTE : "Per creator. Barter works best when the product's value matches the work."} />
+        <fieldset disabled={live} className="contents">
         <div className="flex flex-col gap-5">
           <div className="grid gap-3 sm:grid-cols-3">
             {(Object.keys(COMPENSATION_LABELS) as CompensationType[]).map((t) => (
@@ -248,6 +255,7 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
             </p>
           )}
         </div>
+        </fieldset>
       </Card>
 
       <Card>
@@ -255,15 +263,24 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
         <div className="flex flex-col gap-5">
           <div className="grid gap-5 sm:grid-cols-3">
             <Field label="Followers from">
-              <Input required type="number" min={0} step={1000} value={f.followersMin} onChange={(e) => set("followersMin", e.target.value)} />
+              <Input required disabled={live} type="number" min={0} step={1000} value={f.followersMin} onChange={(e) => set("followersMin", e.target.value)} />
             </Field>
             <Field label="Followers up to">
-              <Input required type="number" min={0} step={1000} value={f.followersMax} onChange={(e) => set("followersMax", e.target.value)} />
+              <Input required disabled={live} type="number" min={0} step={1000} value={f.followersMax} onChange={(e) => set("followersMax", e.target.value)} />
             </Field>
-            <Field label="Creators needed">
-              <Input required type="number" min={1} max={100} value={f.creatorsNeeded} onChange={(e) => set("creatorsNeeded", e.target.value)} />
+            <Field label="Creators needed" hint={live ? `At least ${campaign?.approvedCount ?? 0}: that many are approved.` : undefined}>
+              <Input
+                required
+                type="number"
+                min={live ? Math.max(1, campaign?.approvedCount ?? 1) : 1}
+                max={100}
+                value={f.creatorsNeeded}
+                onChange={(e) => set("creatorsNeeded", e.target.value)}
+              />
             </Field>
           </div>
+          {live && <p className="text-xs text-zinc-500">Follower range, cities, gender and languages: {LOCKED_NOTE.toLowerCase()}</p>}
+          <fieldset disabled={live} className="contents">
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Preferred cities (optional)">
               <Select value="" onChange={(e) => e.target.value && toggle("cityIds", e.target.value, 20)}>
@@ -299,21 +316,31 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
               </Chip>
             ))}
           </Chips>
+          </fieldset>
         </div>
       </Card>
 
       <Card>
-        <SectionTitle title="Timeline & guidelines" subtitle="Content goes live after applications close." />
+        <SectionTitle
+          title="Timeline & guidelines"
+          subtitle={live ? "Content goes live after applications close. While live, dates can only move later." : "Content goes live after applications close."}
+        />
         <div className="flex flex-col gap-5">
           <div className="grid gap-5 sm:grid-cols-3">
             <Field label="Apply by">
-              <Input required type="date" value={f.applyBy} onChange={(e) => set("applyBy", e.target.value)} />
+              <Input required type="date" min={live ? campaign?.applyBy : undefined} value={f.applyBy} onChange={(e) => set("applyBy", e.target.value)} />
             </Field>
             <Field label="Content from">
               <Input required type="date" value={f.contentWindowStart} onChange={(e) => set("contentWindowStart", e.target.value)} />
             </Field>
             <Field label="Content until">
-              <Input required type="date" value={f.contentWindowEnd} onChange={(e) => set("contentWindowEnd", e.target.value)} />
+              <Input
+                required
+                type="date"
+                min={live ? campaign?.contentWindowEnd : undefined}
+                value={f.contentWindowEnd}
+                onChange={(e) => set("contentWindowEnd", e.target.value)}
+              />
             </Field>
           </div>
           <Field label="Guidelines (optional)" hint="Do's and don'ts, key messages, disclosure reminders.">
@@ -332,7 +359,12 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
 
       <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-4 rounded-full border border-zinc-200 bg-white/90 px-6 py-3 shadow-lift backdrop-blur">
         <ErrorText>{save.isError && errorMessage(save.error)}</ErrorText>
-        <span className="text-xs text-zinc-500">{!save.isError && "Saves as a draft. Nothing is public until you publish."}</span>
+        <span className="text-xs text-zinc-500">
+          {!save.isError &&
+            (live
+              ? "Changes go live right away. Creators who applied or were invited are told what changed."
+              : "Saves as a draft. Nothing is public until you publish.")}
+        </span>
         <Button type="submit" disabled={save.isPending || f.categoryIds.length === 0 || input.deliverables.length === 0}>
           {save.isPending ? (
             <>

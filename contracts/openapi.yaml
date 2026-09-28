@@ -1031,6 +1031,13 @@ paths:
       tags: [campaign]
       operationId: updateCampaign
       summary: Update a campaign (all fields in DRAFT; limited fields once PUBLISHED)
+      description: >
+        Drafts: every field. Live (PUBLISHED) campaigns: platform, categories, compensation type, budget, product value,
+        deliverable types/quantities and creator criteria are locked (422 on the field). The title, description,
+        guidelines, product name/URL, hashtags, mentions, reference links, brief file and deliverable notes can change;
+        apply-by and content-window end can only move later; creatorsNeeded can't go below approvedCount. Creators who
+        applied or were invited and are still waiting get a notification and email listing what changed. Existing deals
+        keep their own terms. Closed or taken-down campaigns: 409.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/CampaignId'
@@ -1615,7 +1622,10 @@ paths:
       tags: [deal]
       operationId: raiseDispute
       summary: Raise an issue for admin review
-      x-priority: P1
+      description: >
+        Either party, while the deal is in progress (not completed, cancelled or already disputed: 409). The deal moves
+        to DISPUTED and its steps pause until an admin resolves it; messages stay open. The other party and the admins
+        are notified.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/DealId'
@@ -1631,9 +1641,10 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Dispute' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/reviews:
@@ -1990,6 +2001,55 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /admin/disputes:
+    get:
+      tags: [admin]
+      operationId: adminListDisputes
+      summary: Disputes, open first (oldest first), then resolved (newest first)
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [OPEN, RESOLVED] }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of disputes
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminDisputePage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/disputes/{disputeId}/resolve:
+    post:
+      tags: [admin]
+      operationId: adminResolveDispute
+      summary: Resolve a dispute
+      description: >
+        RESUME puts the deal back where it was; COMPLETE completes it (counts and ratings as usual); CANCEL cancels it
+        (not counted against either party). The resolution note is shown to both parties, who are notified. Audited.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DisputeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResolveDisputeRequest' }
+      responses:
+        '200':
+          description: Resolved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminDispute' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /admin/brands:
     get:
       tags: [admin]
@@ -2192,6 +2252,11 @@ components:
       schema: { type: string, format: uuid }
     DealId:
       name: dealId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DisputeId:
+      name: disputeId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -2432,6 +2497,8 @@ components:
         - DEAL_CANCELLED
         - DEAL_COMPLETED
         - MESSAGE_RECEIVED
+        - DISPUTE_RAISED
+        - DISPUTE_RESOLVED
         - SYSTEM
 
     # ─────────── shared ───────────
@@ -3254,6 +3321,9 @@ components:
             myReview: { $ref: '#/components/schemas/Review' }
             counterpartyReview: { $ref: '#/components/schemas/Review' }
             cancelReason: { type: string }
+            dispute:
+              allOf: [{ $ref: '#/components/schemas/Dispute' }]
+              description: The deal's latest dispute, if any
             timeline:
               type: array
               items: { $ref: '#/components/schemas/DealEvent' }
@@ -3277,6 +3347,12 @@ components:
         screenshotFileIds:
           type: array
           items: { type: string, format: uuid }
+        screenshots:
+          type: array
+          description: >
+            Short-lived links to the screenshots (same order as screenshotFileIds), for the deal's brand and creator.
+            Links expire (see expiresAt); fetch the deal again for fresh ones.
+          items: { $ref: '#/components/schemas/FileUrl' }
         notes: { type: string }
         disclosureConfirmed: { type: boolean }
         reviewStatus: { $ref: '#/components/schemas/SubmissionReviewStatus' }
@@ -3354,8 +3430,39 @@ components:
         status:
           type: string
           enum: [OPEN, RESOLVED]
+        raisedBy: { $ref: '#/components/schemas/UserRef' }
+        outcome: { $ref: '#/components/schemas/DisputeOutcome' }
         resolution: { type: string }
         createdAt: { type: string, format: date-time }
+        resolvedAt: { type: string, format: date-time }
+    DisputeOutcome:
+      type: string
+      enum: [RESUME, COMPLETE, CANCEL]
+    ResolveDisputeRequest:
+      type: object
+      required: [outcome, resolution]
+      properties:
+        outcome: { $ref: '#/components/schemas/DisputeOutcome' }
+        resolution: { type: string, minLength: 10, maxLength: 2000 }
+    AdminDispute:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/Dispute'
+        - type: object
+          required: [deal]
+          properties:
+            deal: { $ref: '#/components/schemas/DealSummary' }
+            statusBeforeDispute:
+              allOf: [{ $ref: '#/components/schemas/DealStatus' }]
+              description: Where the deal was when the dispute was raised (open disputes only)
+    AdminDisputePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminDispute' }
+        nextCursor: { type: string }
     DealEvent:
       type: object
       required: [type, occurredAt]

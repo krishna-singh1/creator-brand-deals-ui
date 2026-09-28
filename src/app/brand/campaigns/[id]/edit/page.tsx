@@ -38,7 +38,7 @@ function Editor({ id, reopened }: { id: string; reopened: boolean }) {
   if (!data) return <ContentSkeleton />;
   return (
     <div className="flex flex-col gap-10">
-      <PageTitle eyebrow={reopened ? "Reopened as a new draft" : "Edit draft"} title={data.title} />
+      <PageTitle eyebrow={reopened ? "Reopened as a new draft" : data.status === "PUBLISHED" ? "Edit live campaign" : "Edit draft"} title={data.title} />
       {reopened && (
         <Card tone="highlight" className="p-6">
           <p className="font-display text-xl text-ink">Copied from your earlier campaign</p>
