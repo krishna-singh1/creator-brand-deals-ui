@@ -79,5 +79,18 @@ browser. Product docs, the decision log, event flows and the **API contract are 
   bootstrap admin in once per run (email code) and saves `e2e/.auth/admin.json` for specs to reuse)
 
 ## Git
-- Commit author `krishna-singh1` (repo-local config). Short action-only messages. No co-author trailers.
-- Commit after each tested unit. The user pushes.
+- Commit author `krishna-singh1` (repo-local config). Short, action-only commit messages (e.g. "Add catalog API").
+  No co-author trailers.
+- The default branch is `master`. (`main` is an old mirror of it; don't use it.)
+- **Every change goes through a branch and a pull request. Never commit or push to `master`.**
+  1. Start from the latest `master`: `git checkout master && git pull --ff-only origin master`.
+  2. Create a branch for the feature or fix: `git checkout -b <type>/<short-kebab-name>`, with `<type>` one of
+     `feat`, `fix`, `chore`, `docs`. One branch per feature.
+  3. Commit after each tested unit of work.
+  4. When the feature is complete and verified (see "Verification" / "Commands"), push the branch
+     (`git push -u origin <branch>`) and open a PR into `master`: title = what it does; body = what changed, why,
+     and how it was tested. Use `gh pr create --base master` when the GitHub CLI is available; otherwise share
+     `https://github.com/krishna-singh1/creator-brand-deals-ui/compare/master...<branch>?expand=1`.
+  5. Don't merge PRs, force-push, or delete branches: the user reviews and merges.
+- Features that span both repos use the same branch name in each (this repo and `creator-brand-deals (API)`), one PR per repo,
+  each linking the other.
