@@ -8,7 +8,7 @@ import { AppShell } from "@/components/app-shell";
 import { MatchScore } from "@/components/campaign-bits";
 import { Reveal } from "@/components/motion";
 import { RequireSession } from "@/components/require-session";
-import { Button, Card, ErrorText, PageTitle, Select, Skeleton, StatusBadge } from "@/components/ui";
+import { Button, Card, ErrorText, Field, Input, PageTitle, Select, Skeleton, StatusBadge } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
 import { type Applicant, type ApplicationStatus, isOpen } from "@/lib/applications";
 import { errorMessage } from "@/lib/errors";
@@ -90,7 +90,7 @@ function Applicants({ campaignId }: { campaignId: string }) {
         <ul className="flex flex-col gap-5">
           {items.map((a, i) => (
             <Reveal as="li" key={a.id} delay={Math.min(i, 6) * 60}>
-              <ApplicantCard applicant={a} campaignId={campaignId} />
+              <ApplicantCard applicant={a} campaignId={campaignId} paid={campaign ? campaign.compensationType !== "PRODUCT" : a.quotedTotalPaise > 0} />
             </Reveal>
           ))}
         </ul>
@@ -104,7 +104,8 @@ function Applicants({ campaignId }: { campaignId: string }) {
   );
 }
 
-function ApplicantCard({ applicant: a, campaignId }: { applicant: Applicant; campaignId: string }) {
+function ApplicantCard({ applicant: a, campaignId, paid }: { applicant: Applicant; campaignId: string; paid: boolean }) {
+  const [approving, setApproving] = useState(false);
   const queryClient = useQueryClient();
   const path = { params: { path: { applicationId: a.id } } };
   const refresh = () => {
@@ -125,15 +126,6 @@ function ApplicantCard({ applicant: a, campaignId }: { applicant: Applicant; cam
   const error = [shortlist, reject, approve].find((m) => m.isError)?.error;
   const c = a.creator;
 
-  const onApprove = () => {
-    const input = window.prompt(
-      `Approve ${c.displayName}? This creates the deal and shares contact details.\n\nAgreed amount in ₹ (leave as is to accept the quote):`,
-      String(a.quotedTotalPaise / 100),
-    );
-    if (input === null) return;
-    const agreed = rupeesToPaise(Number(input));
-    approve.mutate(agreed === a.quotedTotalPaise ? undefined : agreed);
-  };
 
   return (
     <Card className="flex flex-col gap-5">
@@ -192,11 +184,21 @@ function ApplicantCard({ applicant: a, campaignId }: { applicant: Applicant; cam
         </Link>
       )}
 
+      {isOpen(a.status) && approving && (
+        <ApproveForm
+          creatorName={c.displayName}
+          quotedTotalPaise={a.quotedTotalPaise}
+          paid={paid}
+          pending={approve.isPending}
+          error={approve.error}
+          onCancel={() => setApproving(false)}
+          onApprove={(agreed) => approve.mutate(agreed === a.quotedTotalPaise ? undefined : agreed)}
+        />
+      )}
+
       {isOpen(a.status) && (
         <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={onApprove} disabled={approve.isPending}>
-            {approve.isPending ? "Approving…" : "Approve"}
-          </Button>
+          {!approving && <Button onClick={() => setApproving(true)}>Approve</Button>}
           {a.status === "APPLIED" && (
             <Button variant="secondary" onClick={() => shortlist.mutate()} disabled={shortlist.isPending}>
               Shortlist
@@ -216,5 +218,59 @@ function ApplicantCard({ applicant: a, campaignId }: { applicant: Applicant; cam
         </div>
       )}
     </Card>
+  );
+}
+
+/**
+ * Confirms an approval. Paid deals need an agreed amount above ₹0 (prefilled with the quote, editable if you
+ * negotiated); barter deals have no amount. Approving creates the deal and shares contact details.
+ */
+function ApproveForm({
+  creatorName,
+  quotedTotalPaise,
+  paid,
+  pending,
+  error,
+  onCancel,
+  onApprove,
+}: {
+  creatorName: string;
+  quotedTotalPaise: number;
+  paid: boolean;
+  pending: boolean;
+  error: unknown;
+  onCancel: () => void;
+  onApprove: (agreedTotalPaise: number) => void;
+}) {
+  const [rupees, setRupees] = useState(String(quotedTotalPaise / 100));
+  const amount = Number(rupees);
+  const valid = !paid || (rupees.trim() !== "" && Number.isFinite(amount) && amount > 0);
+  return (
+    <form
+      className="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valid) onApprove(paid ? rupeesToPaise(amount) : 0);
+      }}
+    >
+      <p className="text-sm text-zinc-700">
+        Approve <span className="font-medium text-ink">{creatorName}</span>? This creates the deal and shares contact details with both of you.
+      </p>
+      {paid && (
+        <Field label="Agreed amount (₹)" hint={`Their quote: ${formatPaise(quotedTotalPaise)}. Change it only if you agreed a different fee.`}>
+          <Input type="number" min={1} step="1" required className="max-w-48" value={rupees} onChange={(e) => setRupees(e.target.value)} autoFocus />
+        </Field>
+      )}
+      {paid && !valid && <ErrorText>Enter an amount above ₹0.</ErrorText>}
+      <ErrorText>{error ? errorMessage(error) : null}</ErrorText>
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" disabled={!valid || pending}>
+          {pending ? "Approving…" : paid ? `Approve at ${valid ? formatPaise(rupeesToPaise(amount)) : "…"}` : "Approve barter deal"}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }

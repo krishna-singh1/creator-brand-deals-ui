@@ -81,11 +81,18 @@ test("brand publishes a campaign; a verified creator applies; the brand approves
   const applicant = brand.getByText("Meera Bakes");
   await expect(applicant).toBeVisible();
   await expect(brand.getByText("₹9,000").first()).toBeVisible();
-  brand.once("dialog", (d) => d.accept());
-  await brand.getByRole("button", { name: "Approve" }).click();
+  await brand.getByRole("button", { name: "Approve", exact: true }).click();
+  // The agreed amount starts at the quote and can't be emptied to ₹0.
+  const amount = brand.getByLabel("Agreed amount (₹)");
+  await expect(amount).toHaveValue("9000");
+  await amount.fill("");
+  await expect(brand.getByText("Enter an amount above ₹0.")).toBeVisible();
+  await amount.fill("9000");
+  await brand.getByRole("button", { name: "Approve at ₹9,000" }).click();
   await brand.getByRole("link", { name: /Open deal/ }).click();
   await expect(brand).toHaveURL(/\/deals\/[0-9a-f-]+$/);
   await expect(brand.getByText("The creator is working on it")).toBeVisible();
+  await expect(brand.getByText("₹9,000").first()).toBeVisible();
 
   // ── Creator sees the result ──
   await creator.reload();

@@ -2013,7 +2013,7 @@ export interface components {
             matchScore: number;
         };
         ApproveApplicationRequest: {
-            /** @description Defaults to quotedTotalPaise. Brand may record a negotiated amount. */
+            /** @description Defaults to quotedTotalPaise. Brand may record a negotiated amount. Paid deals (CASH, PRODUCT_PLUS_CASH) need more than 0; barter (PRODUCT) deals must be 0. Otherwise 422 VALIDATION_FAILED on agreedTotalPaise. */
             agreedTotalPaise?: components["schemas"]["Paise"];
         };
         ApproveApplicationResponse: {
