@@ -91,6 +91,8 @@ browser. Product docs, the decision log, event flows and the **API contract are 
      (`git push -u origin <branch>`) and open a PR into `master`: title = what it does; body = what changed, why,
      and how it was tested. Use `gh pr create --base master` when the GitHub CLI is available; otherwise share
      `https://github.com/krishna-singh1/creator-brand-deals-ui/compare/master...<branch>?expand=1`.
-  5. Don't merge PRs, force-push, or delete branches: the user reviews and merges.
+  5. CI runs on every PR (`.github/workflows/ci.yml`) and must be green before the PR is ready: if a check fails,
+     fix it on the same branch and push again. `master` is protected: PRs can't merge until the required checks pass.
+  6. Don't merge PRs, force-push, or delete branches: the user reviews and merges.
 - Features that span both repos use the same branch name in each (this repo and `creator-brand-deals (API)`), one PR per repo,
   each linking the other.
