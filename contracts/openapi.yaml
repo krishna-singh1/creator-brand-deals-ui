@@ -2711,6 +2711,9 @@ components:
           items: { type: string, format: uuid }
         ratingAvg: { type: number }
         dealsCompleted: { type: integer }
+        dealsCancelled:
+          type: integer
+          description: Deals the creator cancelled themselves (brand cancellations don't count)
     CreatorPublicProfile:
       unevaluatedProperties: false
       allOf:

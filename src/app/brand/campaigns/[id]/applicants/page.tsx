@@ -10,7 +10,7 @@ import { Reveal } from "@/components/motion";
 import { RequireSession } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, Input, PageTitle, Select, Skeleton, StatusBadge } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
-import { type Applicant, type ApplicationStatus, isOpen } from "@/lib/applications";
+import { type Applicant, type ApplicationStatus, isOpen, reliability } from "@/lib/applications";
 import { errorMessage } from "@/lib/errors";
 import { DELIVERABLE_LABELS, formatCount, formatPaise, rupeesToPaise } from "@/lib/format";
 
@@ -148,6 +148,7 @@ function ApplicantCard({ applicant: a, campaignId, paid }: { applicant: Applican
             {c.metricSource === "ADMIN_VERIFIED" && (
               <span className="text-[11px] uppercase tracking-[0.14em] text-emerald-700">Metrics verified by BrandDeal</span>
             )}
+            <Reliability creator={c} />
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -272,5 +273,23 @@ function ApproveForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/** Track record on BrandDeal, so brands can spot creators who often cancel. */
+function Reliability({ creator }: { creator: Applicant["creator"] }) {
+  const r = reliability(creator);
+  if (r.isNew) return <span className="text-xs text-zinc-500">New to BrandDeal: no completed deals yet</span>;
+  return (
+    <span className="flex flex-wrap items-center gap-2 text-xs text-zinc-600">
+      {r.completed} deal{r.completed === 1 ? "" : "s"} completed
+      {r.cancelled > 0 && ` · ${r.cancelled} cancelled by the creator`}
+      {creator.ratingAvg ? ` · ★ ${Number(creator.ratingAvg).toFixed(1)}` : ""}
+      {r.oftenCancels && (
+        <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-900 ring-1 ring-amber-200" title="Cancelled 2 or more deals, at least 30% of their deals">
+          Often cancels
+        </span>
+      )}
+    </span>
   );
 }

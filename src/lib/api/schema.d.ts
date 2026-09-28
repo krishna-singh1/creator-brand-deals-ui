@@ -1788,6 +1788,8 @@ export interface components {
             categoryIds: string[];
             ratingAvg?: number;
             dealsCompleted?: number;
+            /** @description Deals the creator cancelled themselves (brand cancellations don't count) */
+            dealsCancelled?: number;
         };
         CreatorPublicProfile: components["schemas"]["CreatorCard"] & {
             bio?: string;

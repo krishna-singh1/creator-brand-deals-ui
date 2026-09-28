@@ -27,3 +27,14 @@ export function suggestedUnitPaise(line: QuoteLineSuggestion): number {
   const mid = (line.range.minPaise + line.range.maxPaise) / 2 / line.quantity;
   return Math.round(mid / 10_000) * 10_000;
 }
+
+/**
+ * A creator's track record for brands: deals completed vs cancelled by the creator. Flags frequent cancellers
+ * (2+ cancellations making up at least 30% of their closed deals).
+ */
+export function reliability(c: { dealsCompleted?: number; dealsCancelled?: number }) {
+  const completed = c.dealsCompleted ?? 0;
+  const cancelled = c.dealsCancelled ?? 0;
+  const closed = completed + cancelled;
+  return { completed, cancelled, isNew: closed === 0, oftenCancels: cancelled >= 2 && cancelled / closed >= 0.3 };
+}
