@@ -1615,7 +1615,10 @@ paths:
       tags: [deal]
       operationId: raiseDispute
       summary: Raise an issue for admin review
-      x-priority: P1
+      description: >
+        Either party, while the deal is in progress (not completed, cancelled or already disputed: 409). The deal moves
+        to DISPUTED and its steps pause until an admin resolves it; messages stay open. The other party and the admins
+        are notified.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/DealId'
@@ -1631,9 +1634,10 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Dispute' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '501': { $ref: '#/components/responses/NotImplemented' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/reviews:
@@ -1990,6 +1994,55 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /admin/disputes:
+    get:
+      tags: [admin]
+      operationId: adminListDisputes
+      summary: Disputes, open first (oldest first), then resolved (newest first)
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [OPEN, RESOLVED] }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of disputes
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminDisputePage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/disputes/{disputeId}/resolve:
+    post:
+      tags: [admin]
+      operationId: adminResolveDispute
+      summary: Resolve a dispute
+      description: >
+        RESUME puts the deal back where it was; COMPLETE completes it (counts and ratings as usual); CANCEL cancels it
+        (not counted against either party). The resolution note is shown to both parties, who are notified. Audited.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/DisputeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResolveDisputeRequest' }
+      responses:
+        '200':
+          description: Resolved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminDispute' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /admin/pricing/rate-table:
     get:
       tags: [admin]
@@ -2117,6 +2170,11 @@ components:
       schema: { type: string, format: uuid }
     DealId:
       name: dealId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DisputeId:
+      name: disputeId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -2356,6 +2414,8 @@ components:
         - DEAL_CANCELLED
         - DEAL_COMPLETED
         - MESSAGE_RECEIVED
+        - DISPUTE_RAISED
+        - DISPUTE_RESOLVED
         - SYSTEM
 
     # ─────────── shared ───────────
@@ -3157,6 +3217,9 @@ components:
             myReview: { $ref: '#/components/schemas/Review' }
             counterpartyReview: { $ref: '#/components/schemas/Review' }
             cancelReason: { type: string }
+            dispute:
+              allOf: [{ $ref: '#/components/schemas/Dispute' }]
+              description: The deal's latest dispute, if any
             timeline:
               type: array
               items: { $ref: '#/components/schemas/DealEvent' }
@@ -3257,8 +3320,39 @@ components:
         status:
           type: string
           enum: [OPEN, RESOLVED]
+        raisedBy: { $ref: '#/components/schemas/UserRef' }
+        outcome: { $ref: '#/components/schemas/DisputeOutcome' }
         resolution: { type: string }
         createdAt: { type: string, format: date-time }
+        resolvedAt: { type: string, format: date-time }
+    DisputeOutcome:
+      type: string
+      enum: [RESUME, COMPLETE, CANCEL]
+    ResolveDisputeRequest:
+      type: object
+      required: [outcome, resolution]
+      properties:
+        outcome: { $ref: '#/components/schemas/DisputeOutcome' }
+        resolution: { type: string, minLength: 10, maxLength: 2000 }
+    AdminDispute:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/Dispute'
+        - type: object
+          required: [deal]
+          properties:
+            deal: { $ref: '#/components/schemas/DealSummary' }
+            statusBeforeDispute:
+              allOf: [{ $ref: '#/components/schemas/DealStatus' }]
+              description: Where the deal was when the dispute was raised (open disputes only)
+    AdminDisputePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminDispute' }
+        nextCursor: { type: string }
     DealEvent:
       type: object
       required: [type, occurredAt]

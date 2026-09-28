@@ -10,10 +10,11 @@ import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Card, PageTitle, SectionTitle, StatusBadge } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
 import { formatDate } from "@/lib/campaigns";
-import { CANCELLABLE, type Deal, dealKey, dealSteps, NEXT_ACTION_COPY } from "@/lib/deals";
+import { CANCELLABLE, type Deal, dealKey, dealSteps, DISPUTABLE, NEXT_ACTION_COPY } from "@/lib/deals";
 import { DELIVERABLE_LABELS, formatDateTime, formatPaise } from "@/lib/format";
 
 import { DeliverablesPanel } from "./deliverables-panel";
+import { DisputeBanner, ReportProblem } from "./dispute-panel";
 import { MessagesPanel } from "./messages-panel";
 import { CancelDeal, PaymentPanel, ReviewPanel, ShipmentPanel } from "./step-panels";
 
@@ -32,6 +33,8 @@ const EVENT_LABELS: Record<string, string> = {
   REVIEW_SUBMITTED: "Rating left",
   REMINDER_CONTENT_DUE: "Reminder sent: content due soon",
   REMINDER_PAYMENT_PENDING: "Reminder sent: payment pending",
+  DISPUTE_RAISED: "Issue reported to BrandDeal",
+  DISPUTE_RESOLVED: "Issue resolved by BrandDeal",
 };
 
 export default function DealPage({ params }: { params: Promise<{ id: string }> }) {
@@ -75,7 +78,8 @@ function DealView({ id, isBrand, meId }: { id: string; isBrand: boolean; meId: s
       </PageTitle>
       {!isBrand && <BrandLine brand={deal.brand} />}
 
-      {deal.status !== "CANCELLED" && <Progress deal={deal} />}
+      {deal.status !== "CANCELLED" && deal.status !== "DISPUTED" && <Progress deal={deal} />}
+      <DisputeBanner deal={deal} />
 
       {deal.status === "CANCELLED" ? (
         <Card tone="danger">
@@ -83,7 +87,8 @@ function DealView({ id, isBrand, meId }: { id: string; isBrand: boolean; meId: s
           {deal.cancelReason && <p className="mt-2 text-sm text-zinc-700">Reason: {deal.cancelReason}</p>}
         </Card>
       ) : (
-        next && (
+        next &&
+        deal.status !== "DISPUTED" && (
           <Card tone="highlight">
             <p className="font-display text-2xl text-ink">{next.title}</p>
             <p className="mt-1 text-sm text-zinc-700">{next.body}</p>
@@ -98,6 +103,7 @@ function DealView({ id, isBrand, meId }: { id: string; isBrand: boolean; meId: s
           {hasPayment && <PaymentPanel deal={deal} isBrand={isBrand} />}
           {deal.status === "COMPLETED" && <ReviewPanel deal={deal} partnerName={partnerName} />}
           {CANCELLABLE.includes(deal.status) && nothingSubmitted && <CancelDeal deal={deal} />}
+          {DISPUTABLE.includes(deal.status) && <ReportProblem deal={deal} />}
         </div>
         <div className="flex flex-col gap-6">
           <MessagesPanel dealId={deal.id} meId={meId} partnerName={partnerName} readOnly={deal.status === "CANCELLED"} />
