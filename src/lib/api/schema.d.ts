@@ -687,7 +687,10 @@ export interface paths {
         };
         /** Full campaign (owner brand only) */
         get: operations["getCampaign"];
-        /** Update a campaign (all fields in DRAFT; limited fields once PUBLISHED) */
+        /**
+         * Update a campaign (all fields in DRAFT; limited fields once PUBLISHED)
+         * @description Drafts: every field. Live (PUBLISHED) campaigns: platform, categories, compensation type, budget, product value, deliverable types/quantities and creator criteria are locked (422 on the field). The title, description, guidelines, product name/URL, hashtags, mentions, reference links, brief file and deliverable notes can change; apply-by and content-window end can only move later; creatorsNeeded can't go below approvedCount. Creators who applied or were invited and are still waiting get a notification and email listing what changed. Existing deals keep their own terms. Closed or taken-down campaigns: 409.
+         */
         put: operations["updateCampaign"];
         post?: never;
         /** Delete a DRAFT campaign */

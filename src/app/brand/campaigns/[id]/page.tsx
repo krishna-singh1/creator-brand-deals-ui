@@ -110,6 +110,12 @@ function Detail({ id }: { id: string }) {
             <p className="text-sm text-zinc-600">
               Live for verified creators · {c.approvedCount}/{c.creatorsNeeded} creators approved
             </p>
+            <Link
+              href={`/brand/campaigns/${c.id}/edit`}
+              className="inline-flex h-11 items-center rounded-full border border-zinc-300 px-6 text-sm font-medium text-ink transition-all hover:-translate-y-0.5 hover:border-ink"
+            >
+              Edit brief
+            </Link>
             <Button
               variant="secondary"
               disabled={close.isPending}
