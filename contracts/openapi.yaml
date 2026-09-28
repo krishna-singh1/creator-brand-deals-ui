@@ -289,6 +289,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /me/consents:
     post:
@@ -310,6 +311,7 @@ paths:
               schema: { $ref: '#/components/schemas/Me' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /me:
     delete:
@@ -323,6 +325,7 @@ paths:
           description: Account deleted, cookies cleared
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   # ───────────────────────────── catalog ─────────────────────────────
   /catalog/categories:
@@ -420,6 +423,7 @@ paths:
               schema: { $ref: '#/components/schemas/PresignedUpload' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /files/{fileId}/url:
     get:
@@ -473,6 +477,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /creator/social-accounts:
     get:
@@ -510,6 +515,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /creator/social-accounts/{socialAccountId}:
     put:
@@ -535,6 +541,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
     delete:
       tags: [creator]
       operationId: deleteSocialAccount
@@ -548,6 +555,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /creator/portfolio:
     get:
@@ -586,6 +594,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /creator/portfolio/{portfolioItemId}:
     delete:
@@ -604,6 +613,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /creator/rates:
     get:
@@ -638,6 +648,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /creator/verification:
     get:
@@ -675,6 +686,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /creator/price-suggestions:
     get:
@@ -763,6 +775,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /creator/earnings:
     get:
@@ -912,6 +925,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /campaigns/mine:
     get:
@@ -992,6 +1006,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/Unprocessable' }
         '501': { $ref: '#/components/responses/NotImplemented' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /campaigns/{campaignId}:
     get:
@@ -1032,6 +1047,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
     delete:
       tags: [campaign]
       operationId: deleteCampaign
@@ -1046,6 +1062,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /campaigns/{campaignId}/publish:
     post:
@@ -1066,6 +1083,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /campaigns/{campaignId}/close:
     post:
@@ -1085,6 +1103,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /campaigns/{campaignId}/duplicate:
     post:
@@ -1110,6 +1129,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /campaigns/{campaignId}/public:
     get:
@@ -1153,6 +1173,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
     get:
       tags: [application]
       operationId: listCampaignApplicants
@@ -1204,6 +1225,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '501': { $ref: '#/components/responses/NotImplemented' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /applications/{applicationId}/withdraw:
     post:
@@ -1223,6 +1245,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /applications/{applicationId}/shortlist:
     post:
@@ -1242,6 +1265,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /applications/{applicationId}/reject:
     post:
@@ -1267,6 +1291,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /applications/{applicationId}/approve:
     post:
@@ -1293,6 +1318,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /applications/{applicationId}/accept-invite:
     post:
@@ -1318,6 +1344,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '501': { $ref: '#/components/responses/NotImplemented' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /applications/{applicationId}/decline-invite:
     post:
@@ -1338,6 +1365,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '501': { $ref: '#/components/responses/NotImplemented' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   # ───────────────────────────── deal ─────────────────────────────
   /deals:
@@ -1401,6 +1429,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/product-received:
     post:
@@ -1420,6 +1449,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/deliverables/{deliverableId}/submissions:
     post:
@@ -1449,6 +1479,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /submissions/{submissionId}/approve:
     post:
@@ -1468,6 +1499,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /submissions/{submissionId}/request-changes:
     post:
@@ -1493,6 +1525,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/payment:
     post:
@@ -1518,6 +1551,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/payment/confirm:
     post:
@@ -1537,6 +1571,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/cancel:
     post:
@@ -1562,6 +1597,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/disputes:
     post:
@@ -1587,6 +1623,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '501': { $ref: '#/components/responses/NotImplemented' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/reviews:
     post:
@@ -1612,6 +1649,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /deals/{dealId}/messages:
     get:
@@ -1655,6 +1693,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/Unprocessable' }
         '501': { $ref: '#/components/responses/NotImplemented' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   # ───────────────────────────── notification ─────────────────────────────
   /notifications:
@@ -1692,6 +1731,7 @@ paths:
           description: Marked read
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /notifications/read-all:
     post:
@@ -1704,6 +1744,7 @@ paths:
         '204':
           description: Marked read
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   # ───────────────────────────── admin ─────────────────────────────
   /admin/verifications:
@@ -1767,6 +1808,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /admin/verifications/{verificationId}/reject:
     post:
@@ -1792,6 +1834,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /admin/users:
     get:
@@ -1843,6 +1886,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /admin/users/{userId}/unsuspend:
     post:
@@ -1862,6 +1906,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /admin/campaigns:
     get:
@@ -1909,6 +1954,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /admin/deals:
     get:
@@ -1963,6 +2009,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /admin/audit-logs:
     get:
