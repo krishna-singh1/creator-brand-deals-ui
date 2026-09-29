@@ -1,59 +1,80 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-
-import { Logo } from "@/components/logo";
 import { notFound } from "next/navigation";
 
-const DOCS: Record<string, string> = {
-  terms: "Terms of Service",
-  privacy: "Privacy Policy",
-  "creator-code": "Creator Code (ASCI ad-disclosure guidelines)",
-  "brand-code": "Brand Code of Conduct",
-  grievance: "Grievance Officer",
-  "data-deletion": "Deleting your data",
-};
+import { Logo } from "@/components/logo";
+import { LEGAL_REVIEWED } from "@/lib/legal";
 
-/** Pages with final text. The others are placeholders until the reviewed legal texts are ready (decision O-07). */
-const BODIES: Record<string, string[]> = {
-  "data-deletion": [
-    "You can delete your BrandDeal account at any time: sign in, open your profile menu, go to Account & security and choose Delete account. Your profile, contact details, photos, verification documents and connected Instagram account are erased; completed deals stay on record for the other party under a deleted name.",
-    "Connect Instagram: when you verify with Instagram we read your follower count and the likes and comments on your recent posts once. We don't keep access to your Instagram account and store only those numbers. Deleting your account removes the link to your Instagram account. You can also remove BrandDeal from Instagram under Settings → Apps and websites.",
-    "If you can't sign in, email our Grievance Officer (see the Grievance page) from the address on your account and we'll delete it within 30 days.",
-  ],
-};
+import { LEGAL_DOCS } from "../_content";
 
 export function generateStaticParams() {
-  return Object.keys(DOCS).map((slug) => ({ slug }));
+  return Object.keys(LEGAL_DOCS).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata(props: PageProps<"/legal/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
-  return { title: `${DOCS[slug] ?? "Legal"} · BrandDeal` };
+  const doc = LEGAL_DOCS[slug];
+  return { title: `${doc?.title ?? "Legal"} · BrandDeal`, description: doc?.summary };
 }
 
-// Placeholder until the reviewed legal texts are ready (decision O-07).
 export default async function LegalPage(props: PageProps<"/legal/[slug]">) {
   const { slug } = await props.params;
-  const title = DOCS[slug];
-  if (!title) notFound();
+  const doc = LEGAL_DOCS[slug];
+  if (!doc) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-24">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-6 py-20">
       <Logo />
-      <div className="flex animate-fade-up flex-col gap-5">
+      <header className="flex animate-fade-up flex-col gap-4">
         <span className="text-xs font-medium uppercase tracking-[0.28em] text-gold-deep">Legal</span>
-        <h1 className="font-display text-5xl leading-tight tracking-tight text-ink">{title}</h1>
-        {(BODIES[slug] ?? ["This document is being finalised with our legal advisors and will be published here before launch."]).map(
-          (paragraph) => (
-            <p key={paragraph} className="text-lg leading-relaxed text-zinc-600">
-              {paragraph}
-            </p>
-          ),
+        <h1 className="font-display text-5xl leading-tight tracking-tight text-ink">{doc.title}</h1>
+        <p className="text-sm text-zinc-500">Version {doc.version}</p>
+        <p className="text-lg leading-relaxed text-zinc-600">{doc.summary}</p>
+        {!LEGAL_REVIEWED && (
+          <p role="note" className="rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-900">
+            Draft for the beta. This text is being reviewed by our legal advisors and may change; you&apos;ll be asked to accept any
+            change that matters.
+          </p>
         )}
-        <Link href="/" className="link-underline w-fit text-sm font-medium text-ink">
+      </header>
+
+      <nav aria-label="Contents" className="rounded-3xl border border-zinc-200 bg-white/70 p-6">
+        <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">Contents</p>
+        <ol className="flex flex-col gap-1.5 text-sm">
+          {doc.sections.map((s) => (
+            <li key={s.id}>
+              <a href={`#${s.id}`} className="link-underline text-zinc-700">
+                {s.heading}
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <div className="flex flex-col gap-10">
+        {doc.sections.map((s) => (
+          <section key={s.id} id={s.id} className="flex scroll-mt-24 flex-col gap-4">
+            <h2 className="font-display text-2xl tracking-tight text-ink">{s.heading}</h2>
+            {s.body}
+          </section>
+        ))}
+      </div>
+
+      <footer className="flex flex-col gap-4 border-t border-zinc-200 pt-8 text-sm">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">Other documents</p>
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {Object.entries(LEGAL_DOCS)
+            .filter(([other]) => other !== slug)
+            .map(([other, d]) => (
+              <Link key={other} href={`/legal/${other}`} className="link-underline text-zinc-700">
+                {d.title}
+              </Link>
+            ))}
+        </div>
+        <Link href="/" className="link-underline w-fit font-medium text-ink">
           ← Return home
         </Link>
-      </div>
+      </footer>
     </main>
   );
 }
