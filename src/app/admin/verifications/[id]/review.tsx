@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 
+import { InstagramChecks } from "@/components/instagram-checks";
 import { ContentSkeleton } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, Input, SectionTitle, StatusBadge, Textarea } from "@/components/ui";
 import { api, type components, unwrap } from "@/lib/api/client";
@@ -154,17 +155,27 @@ function ReviewBody({ id }: { id: string }) {
         </div>
 
         <div className="flex flex-col gap-6">
-          <Card>
-            <SectionTitle title="Insights proofs" subtitle="Links expire in 5 minutes. Reload to refresh." />
-            <div className="grid grid-cols-2 gap-3">
-              {proofs.map((p) => (
-                <a key={p.url} href={p.url} target="_blank" rel="noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.url} alt="Insights screenshot" className="w-full rounded-lg border border-zinc-200" />
-                </a>
-              ))}
-            </div>
-          </Card>
+          {verification.instagram ? (
+            <Card>
+              <SectionTitle
+                title="Connected Instagram"
+                subtitle="Read from Instagram when the creator connected. Failed checks are why this needs a review; approving keeps these numbers unless you correct them."
+              />
+              <InstagramChecks snapshot={verification.instagram} />
+            </Card>
+          ) : (
+            <Card>
+              <SectionTitle title="Insights proofs" subtitle="Links expire in 5 minutes. Reload to refresh." />
+              <div className="grid grid-cols-2 gap-3">
+                {proofs.map((p) => (
+                  <a key={p.url} href={p.url} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt="Insights screenshot" className="w-full rounded-lg border border-zinc-200" />
+                  </a>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {pending ? (
             <Card>

@@ -13,6 +13,7 @@ import { api, unwrap } from "@/lib/api/client";
 import { type Applicant, type ApplicationStatus, isOpen, reliability } from "@/lib/applications";
 import { errorMessage } from "@/lib/errors";
 import { DELIVERABLE_LABELS, formatCount, formatPaise, rupeesToPaise } from "@/lib/format";
+import { isVerifiedSource, verifiedSourceLabel } from "@/lib/verification";
 
 type Sort = "NEWEST" | "MATCH" | "FOLLOWERS" | "ENGAGEMENT" | "PRICE_ASC";
 
@@ -147,8 +148,8 @@ function ApplicantCard({ applicant: a, campaignId, paid }: { applicant: Applican
               @{c.handle} · {formatCount(c.followers)} followers · {c.engagementRate}% engagement
               {c.city ? ` · ${c.city}` : ""}
             </p>
-            {c.metricSource === "ADMIN_VERIFIED" && (
-              <span className="text-[11px] uppercase tracking-[0.14em] text-emerald-700">Metrics verified by BrandDeal</span>
+            {isVerifiedSource(c.metricSource) && (
+              <span className="text-[11px] uppercase tracking-[0.14em] text-emerald-700">{verifiedSourceLabel(c.metricSource)}</span>
             )}
             <Reliability creator={c} />
           </div>

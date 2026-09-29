@@ -27,7 +27,7 @@ export async function apiSession(email: string, password = TEST_PASSWORD): Promi
 /** Admin session saved once per run by global-setup.ts (no parallel admin sign-ins). */
 export const ADMIN_STATE = "e2e/.auth/admin.json";
 
-async function adminSession(): Promise<APIRequestContext> {
+export async function adminSession(): Promise<APIRequestContext> {
   return request.newContext({
     baseURL: `${API_URL}/`,
     extraHTTPHeaders: { "X-Requested-With": "fetch" },
@@ -67,10 +67,10 @@ export async function acceptPendingConsents(api: APIRequestContext) {
 }
 
 /**
- * A verified creator (Pune, Food niche, English, Instagram with 18K followers at 4.11% engagement), approved by the
- * bootstrap admin through the real verification endpoints. Returns the creator's email; sign in with TEST_PASSWORD.
+ * A creator with a complete profile (Pune, Food niche, English, Instagram with 18K followers at 4.11% engagement) who
+ * hasn't asked for verification yet. Returns the email (sign in with TEST_PASSWORD) and the signed-in API context.
  */
-export async function createVerifiedCreator(displayName: string): Promise<string> {
+export async function createCreatorReadyToVerify(displayName: string) {
   const email = `e2e-vc-${Date.now()}-${Math.floor(Math.random() * 1e4)}@example.com`;
   const creator = await apiSession(email);
   expect((await creator.post("me/role", { data: { role: "CREATOR" } })).ok()).toBe(true);
@@ -93,6 +93,15 @@ export async function createVerifiedCreator(displayName: string): Promise<string
     data: { platform: "INSTAGRAM", handle: `vc${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`, followers: 18000, avgLikes: 700, avgComments: 40 },
   });
   expect(account.ok(), await account.text()).toBe(true);
+  return { email, creator };
+}
+
+/**
+ * A verified creator (see createCreatorReadyToVerify), approved by the bootstrap admin through the real verification
+ * endpoints. Returns the creator's email; sign in with TEST_PASSWORD.
+ */
+export async function createVerifiedCreator(displayName: string): Promise<string> {
+  const { email, creator } = await createCreatorReadyToVerify(displayName);
 
   const presign = await (
     await creator.post("files/presign", {

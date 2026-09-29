@@ -436,8 +436,68 @@ export interface paths {
         /** Latest verification request status */
         get: operations["getMyVerification"];
         put?: never;
-        /** Submit profile for admin verification with Insights screenshots */
+        /**
+         * Submit profile for admin verification with Insights screenshots
+         * @description Only while the verification method is `SCREENSHOTS` (see `GET /creator/verification/method`); otherwise `409 VERIFICATION_METHOD_DISABLED`.
+         */
         post: operations["submitVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/creator/verification/method": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How creators verify right now (set by admins with the INSTAGRAM_VERIFICATION flag) */
+        get: operations["getVerificationMethod"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/creator/verification/instagram/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Start "Connect Instagram" (Business Login for Instagram)
+         * @description Returns the Instagram authorization URL to open in the browser. It carries a signed, short-lived `state` bound to the caller. Instagram then redirects to the web app's `/creator/verification/instagram` page with `code` and `state`. Only while the method is `INSTAGRAM` (`409 VERIFICATION_METHOD_DISABLED` otherwise).
+         */
+        get: operations["getInstagramAuthorizeUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/creator/verification/instagram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finish "Connect Instagram" and verify from the account's real numbers
+         * @description Exchanges the one-time `code`, reads the professional account's followers, following and recent posts' likes/comments once (the access token is not stored), and matches the username to the creator's Instagram account on the profile. When every check passes the creator is VERIFIED at once (`status: APPROVED`); otherwise the request waits for an admin (`status: PENDING`) with the numbers and the failed checks. Errors: `409 VERIFICATION_METHOD_DISABLED`, `409 VERIFICATION_ALREADY_PENDING`, `409 INSTAGRAM_ACCOUNT_IN_USE`, `422 INSTAGRAM_NOT_PROFESSIONAL`, `422 INSTAGRAM_HANDLE_MISMATCH` (`details.connected`, `details.expected`), `422 PROFILE_INCOMPLETE`, `422 VALIDATION_FAILED` (bad or expired `state` or `code`), `503 INSTAGRAM_UNAVAILABLE`.
+         */
+        post: operations["verifyWithInstagram"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1496,6 +1556,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/feature-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Feature switches admins can turn on or off */
+        get: operations["adminListFeatureFlags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/feature-flags/{flagKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Turn a feature on or off (audited)
+         * @description A flag whose setup is missing (`available: false`, e.g. INSTAGRAM_VERIFICATION without the Instagram app credentials) can't be turned on: `503 INSTAGRAM_UNAVAILABLE`. Turning a flag off always works.
+         */
+        put: operations["adminSetFeatureFlag"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/audit-logs": {
         parameters: {
             query?: never;
@@ -1535,7 +1632,7 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {string} */
-        ErrorCode: "MALFORMED_REQUEST" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INVALID_STATE_TRANSITION" | "RATE_LIMITED" | "INTERNAL_ERROR" | "NOT_IMPLEMENTED" | "INVALID_CREDENTIALS" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_TOO_MANY_ATTEMPTS" | "GOOGLE_TOKEN_INVALID" | "REFRESH_TOKEN_INVALID" | "ACCOUNT_SUSPENDED" | "ROLE_NOT_SELECTED" | "ROLE_ALREADY_SET" | "CONSENT_REQUIRED" | "PROFILE_INCOMPLETE" | "CREATOR_NOT_VERIFIED" | "BRAND_NOT_VERIFIED" | "CREATOR_UNDERAGE" | "VERIFICATION_ALREADY_PENDING" | "CATEGORY_LIMIT_EXCEEDED" | "CREATOR_NOT_ELIGIBLE" | "APPLICATION_ALREADY_EXISTS" | "CAMPAIGN_NOT_OPEN" | "CAMPAIGN_FILLED" | "DISCLOSURE_REQUIRED" | "REVIEW_ALREADY_EXISTS" | "FILE_TYPE_NOT_ALLOWED" | "FILE_TOO_LARGE" | "FILE_NOT_UPLOADED";
+        ErrorCode: "MALFORMED_REQUEST" | "VALIDATION_FAILED" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INVALID_STATE_TRANSITION" | "RATE_LIMITED" | "INTERNAL_ERROR" | "NOT_IMPLEMENTED" | "INVALID_CREDENTIALS" | "OTP_INVALID" | "OTP_EXPIRED" | "OTP_TOO_MANY_ATTEMPTS" | "GOOGLE_TOKEN_INVALID" | "REFRESH_TOKEN_INVALID" | "ACCOUNT_SUSPENDED" | "ROLE_NOT_SELECTED" | "ROLE_ALREADY_SET" | "CONSENT_REQUIRED" | "PROFILE_INCOMPLETE" | "CREATOR_NOT_VERIFIED" | "BRAND_NOT_VERIFIED" | "CREATOR_UNDERAGE" | "VERIFICATION_ALREADY_PENDING" | "CATEGORY_LIMIT_EXCEEDED" | "CREATOR_NOT_ELIGIBLE" | "APPLICATION_ALREADY_EXISTS" | "CAMPAIGN_NOT_OPEN" | "CAMPAIGN_FILLED" | "DISCLOSURE_REQUIRED" | "REVIEW_ALREADY_EXISTS" | "FILE_TYPE_NOT_ALLOWED" | "FILE_TOO_LARGE" | "FILE_NOT_UPLOADED" | "VERIFICATION_METHOD_DISABLED" | "INSTAGRAM_NOT_PROFESSIONAL" | "INSTAGRAM_HANDLE_MISMATCH" | "INSTAGRAM_ACCOUNT_IN_USE" | "INSTAGRAM_UNAVAILABLE";
         ErrorResponse: {
             error: {
                 code: components["schemas"]["ErrorCode"];
@@ -1878,11 +1975,56 @@ export interface components {
             /** Format: uuid */
             id: string;
             status: components["schemas"]["VerificationStatus"];
+            method: components["schemas"]["VerificationMethod"];
             /** Format: date-time */
             submittedAt: string;
             /** Format: date-time */
             reviewedAt?: string;
             reason?: string;
+            instagram?: components["schemas"]["InstagramSnapshot"];
+        };
+        /**
+         * @description SCREENSHOTS = Insights screenshots reviewed by an admin; INSTAGRAM = Connect Instagram (automatic)
+         * @enum {string}
+         */
+        VerificationMethod: "SCREENSHOTS" | "INSTAGRAM";
+        VerificationMethodInfo: {
+            method: components["schemas"]["VerificationMethod"];
+        };
+        InstagramAuthorizeResponse: {
+            /** Format: uri */
+            authorizeUrl: string;
+        };
+        InstagramVerifyRequest: {
+            code: string;
+            state: string;
+        };
+        /** @description What Instagram reported when the creator connected (read once; no token is kept) */
+        InstagramSnapshot: {
+            username: string;
+            /** @description BUSINESS or MEDIA_CREATOR */
+            accountType: string;
+            followers: number;
+            follows: number;
+            mediaCount: number;
+            /** @description Recent posts (older than 24 h) with visible like counts */
+            postsSampled: number;
+            avgLikes: number;
+            avgComments: number;
+            /** @description Percent, e.g. 4.12 */
+            engagementRate: number;
+            /** @description What the creator had typed before connecting */
+            declaredFollowers?: number;
+            /** Format: date-time */
+            checkedAt: string;
+            checks: components["schemas"]["VerificationCheck"][];
+        };
+        VerificationCheck: {
+            /** @enum {string} */
+            key: "MIN_FOLLOWERS" | "ENOUGH_POSTS" | "ENGAGEMENT_IN_RANGE" | "FOLLOW_RATIO" | "DECLARED_FOLLOWERS_MATCH";
+            passed: boolean;
+            /** @description Plain-language result, e.g. "4.1% engagement (0.5–25% expected)" */
+            detail: string;
         };
         PriceSuggestion: {
             platform: components["schemas"]["Platform"];
@@ -2367,6 +2509,23 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        /** @enum {string} */
+        FeatureFlagKey: "INSTAGRAM_VERIFICATION";
+        FeatureFlag: {
+            key: components["schemas"]["FeatureFlagKey"];
+            enabled: boolean;
+            /** @description False when its setup (e.g. API credentials) is missing; it can't be turned on */
+            available: boolean;
+            description: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        FeatureFlagList: {
+            items: components["schemas"]["FeatureFlag"][];
+        };
+        SetFeatureFlagRequest: {
+            enabled: boolean;
+        };
         NotificationPreferences: {
             /** @description Activity emails on (default) or off. Sign-in and security emails are always sent. */
             emailEnabled: boolean;
@@ -2629,6 +2788,15 @@ export interface components {
         };
         /** @description P1 operation not yet available */
         NotImplemented: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description An external service is unavailable or not configured (e.g. INSTAGRAM_UNAVAILABLE) */
+        ServiceUnavailable: {
             headers: {
                 [name: string]: unknown;
             };
@@ -3515,6 +3683,86 @@ export interface operations {
             409: components["responses"]["Conflict"];
             422: components["responses"]["Unprocessable"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getVerificationMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current method */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationMethodInfo"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getInstagramAuthorizeUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorization URL */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstagramAuthorizeResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    verifyWithInstagram: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstagramVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Verified (APPROVED) or waiting for an admin (PENDING) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     getMyPriceSuggestions: {
@@ -5490,6 +5738,62 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             422: components["responses"]["Unprocessable"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    adminListFeatureFlags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every flag with its state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    adminSetFeatureFlag: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must be `fetch`. Protects against cross-site form posts. */
+                "X-Requested-With": components["parameters"]["CsrfHeader"];
+            };
+            path: {
+                flagKey: components["schemas"]["FeatureFlagKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetFeatureFlagRequest"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlag"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["Unprocessable"];
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     adminListAuditLogs: {

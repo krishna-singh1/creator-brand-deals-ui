@@ -668,6 +668,9 @@ paths:
       tags: [creator]
       operationId: submitVerification
       summary: Submit profile for admin verification with Insights screenshots
+      description: >
+        Only while the verification method is `SCREENSHOTS` (see `GET /creator/verification/method`); otherwise
+        `409 VERIFICATION_METHOD_DISABLED`.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
       requestBody:
@@ -687,6 +690,75 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/Unprocessable' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /creator/verification/method:
+    get:
+      tags: [creator]
+      operationId: getVerificationMethod
+      summary: How creators verify right now (set by admins with the INSTAGRAM_VERIFICATION flag)
+      responses:
+        '200':
+          description: Current method
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationMethodInfo' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /creator/verification/instagram/authorize:
+    get:
+      tags: [creator]
+      operationId: getInstagramAuthorizeUrl
+      summary: Start "Connect Instagram" (Business Login for Instagram)
+      description: >
+        Returns the Instagram authorization URL to open in the browser. It carries a signed, short-lived `state`
+        bound to the caller. Instagram then redirects to the web app's `/creator/verification/instagram` page with
+        `code` and `state`. Only while the method is `INSTAGRAM` (`409 VERIFICATION_METHOD_DISABLED` otherwise).
+      responses:
+        '200':
+          description: Authorization URL
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InstagramAuthorizeResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /creator/verification/instagram:
+    post:
+      tags: [creator]
+      operationId: verifyWithInstagram
+      summary: Finish "Connect Instagram" and verify from the account's real numbers
+      description: >
+        Exchanges the one-time `code`, reads the professional account's followers, following and recent posts'
+        likes/comments once (the access token is not stored), and matches the username to the creator's Instagram
+        account on the profile. When every check passes the creator is VERIFIED at once (`status: APPROVED`);
+        otherwise the request waits for an admin (`status: PENDING`) with the numbers and the failed checks.
+        Errors: `409 VERIFICATION_METHOD_DISABLED`, `409 VERIFICATION_ALREADY_PENDING`,
+        `409 INSTAGRAM_ACCOUNT_IN_USE`, `422 INSTAGRAM_NOT_PROFESSIONAL`, `422 INSTAGRAM_HANDLE_MISMATCH`
+        (`details.connected`, `details.expected`), `422 PROFILE_INCOMPLETE`, `422 VALIDATION_FAILED` (bad or expired
+        `state` or `code`), `503 INSTAGRAM_UNAVAILABLE`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InstagramVerifyRequest' }
+      responses:
+        '201':
+          description: Verified (APPROVED) or waiting for an admin (PENDING)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /creator/price-suggestions:
     get:
@@ -2192,6 +2264,51 @@ paths:
         '422': { $ref: '#/components/responses/Unprocessable' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
+  /admin/feature-flags:
+    get:
+      tags: [admin]
+      operationId: adminListFeatureFlags
+      summary: Feature switches admins can turn on or off
+      responses:
+        '200':
+          description: Every flag with its state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeatureFlagList' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/feature-flags/{flagKey}:
+    put:
+      tags: [admin]
+      operationId: adminSetFeatureFlag
+      summary: Turn a feature on or off (audited)
+      description: >
+        A flag whose setup is missing (`available: false`, e.g. INSTAGRAM_VERIFICATION without the Instagram app
+        credentials) can't be turned on: `503 INSTAGRAM_UNAVAILABLE`. Turning a flag off always works.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: flagKey
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/FeatureFlagKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetFeatureFlagRequest' }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeatureFlag' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
   /admin/audit-logs:
     get:
       tags: [admin]
@@ -2373,6 +2490,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ServiceUnavailable:
+      description: An external service is unavailable or not configured (e.g. INSTAGRAM_UNAVAILABLE)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
     # ─────────── errors ───────────
@@ -2414,6 +2536,11 @@ components:
         - FILE_TYPE_NOT_ALLOWED
         - FILE_TOO_LARGE
         - FILE_NOT_UPLOADED
+        - VERIFICATION_METHOD_DISABLED
+        - INSTAGRAM_NOT_PROFESSIONAL
+        - INSTAGRAM_HANDLE_MISMATCH
+        - INSTAGRAM_ACCOUNT_IN_USE
+        - INSTAGRAM_UNAVAILABLE
     ErrorResponse:
       type: object
       required: [error]
@@ -2898,13 +3025,64 @@ components:
         note: { type: string, maxLength: 500 }
     VerificationRequest:
       type: object
-      required: [id, status, submittedAt]
+      required: [id, status, method, submittedAt]
       properties:
         id: { type: string, format: uuid }
         status: { $ref: '#/components/schemas/VerificationStatus' }
+        method: { $ref: '#/components/schemas/VerificationMethod' }
         submittedAt: { type: string, format: date-time }
         reviewedAt: { type: string, format: date-time }
         reason: { type: string }
+        instagram: { $ref: '#/components/schemas/InstagramSnapshot' }
+    VerificationMethod:
+      type: string
+      description: SCREENSHOTS = Insights screenshots reviewed by an admin; INSTAGRAM = Connect Instagram (automatic)
+      enum: [SCREENSHOTS, INSTAGRAM]
+    VerificationMethodInfo:
+      type: object
+      required: [method]
+      properties:
+        method: { $ref: '#/components/schemas/VerificationMethod' }
+    InstagramAuthorizeResponse:
+      type: object
+      required: [authorizeUrl]
+      properties:
+        authorizeUrl: { type: string, format: uri }
+    InstagramVerifyRequest:
+      type: object
+      required: [code, state]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 2000 }
+        state: { type: string, minLength: 1, maxLength: 500 }
+    InstagramSnapshot:
+      type: object
+      description: What Instagram reported when the creator connected (read once; no token is kept)
+      required: [username, accountType, followers, follows, mediaCount, postsSampled, avgLikes, avgComments,
+        engagementRate, checkedAt, checks]
+      properties:
+        username: { type: string }
+        accountType: { type: string, description: 'BUSINESS or MEDIA_CREATOR' }
+        followers: { type: integer, minimum: 0 }
+        follows: { type: integer, minimum: 0 }
+        mediaCount: { type: integer, minimum: 0 }
+        postsSampled: { type: integer, minimum: 0, description: Recent posts (older than 24 h) with visible like counts }
+        avgLikes: { type: integer, minimum: 0 }
+        avgComments: { type: integer, minimum: 0 }
+        engagementRate: { type: number, description: 'Percent, e.g. 4.12' }
+        declaredFollowers: { type: integer, minimum: 0, description: What the creator had typed before connecting }
+        checkedAt: { type: string, format: date-time }
+        checks:
+          type: array
+          items: { $ref: '#/components/schemas/VerificationCheck' }
+    VerificationCheck:
+      type: object
+      required: [key, passed, detail]
+      properties:
+        key:
+          type: string
+          enum: [MIN_FOLLOWERS, ENOUGH_POSTS, ENGAGEMENT_IN_RANGE, FOLLOW_RATIO, DECLARED_FOLLOWERS_MATCH]
+        passed: { type: boolean }
+        detail: { type: string, description: 'Plain-language result, e.g. "4.1% engagement (0.5–25% expected)"' }
     PriceSuggestion:
       type: object
       required: [platform, deliverableType, tier, range]
@@ -3536,6 +3714,30 @@ components:
         link: { type: string, description: Relative web path }
         readAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
+    FeatureFlagKey:
+      type: string
+      enum: [INSTAGRAM_VERIFICATION]
+    FeatureFlag:
+      type: object
+      required: [key, enabled, available, description]
+      properties:
+        key: { $ref: '#/components/schemas/FeatureFlagKey' }
+        enabled: { type: boolean }
+        available: { type: boolean, description: False when its setup (e.g. API credentials) is missing; it can't be turned on }
+        description: { type: string }
+        updatedAt: { type: string, format: date-time }
+    FeatureFlagList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/FeatureFlag' }
+    SetFeatureFlagRequest:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
     NotificationPreferences:
       type: object
       required: [emailEnabled]
