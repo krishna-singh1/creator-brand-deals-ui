@@ -84,6 +84,7 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 - `src/components/require-session.tsx`: client route guard (UX only; the API enforces access)
 - `src/app/login`, `src/app/onboarding`, `src/app/creator`, `src/app/brand`: screens per role
 - `src/lib/upload.ts`: presign → direct PUT to storage → fileId (ADR 0006)
+- Error monitoring (O-21): `src/instrumentation-client.ts` (browser, error-only masked replay), `src/instrumentation.ts` (server), `src/app/global-error.tsx`; shared options and URL/header scrubbing in `src/lib/monitoring.ts`. Off unless `NEXT_PUBLIC_SENTRY_DSN` is set, so dev and e2e send nothing
 - `src/app/creator/profile`, `src/app/creator/verification`, `src/app/brand/profile`, `src/app/admin`: M2 screens
 - `src/app/brand/campaigns` (incl. `[id]/applicants`), `src/app/creator/campaigns` (incl. the apply panel),
   `src/app/brand/creators` (discover verified creators; `[id]` profile + invite panel), `src/app/creator/applications`, `src/app/deals` (shared by both roles; `[id]/messages-panel.tsx` is the polling message thread): M3–M5 screens; `src/app/admin` (M6): `admin-shell.tsx` (guard + section tabs) and `admin-bits.tsx` (paged list hook, table, reason-required actions) shared by overview, verifications, users, campaigns, deals, pricing and audit pages; `src/components/notification-bell.tsx` in the app shell; shared pieces in
