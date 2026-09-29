@@ -81,6 +81,13 @@ export async function acceptConsents(page: Page) {
 
 /** New account: email + password → verify email with the code → role → agreements → role home. */
 export async function signUp(page: Page, email: string, role: "creator" | "brand", password = TEST_PASSWORD) {
+  await signUpToAgreements(page, email, role, password);
+  await acceptConsents(page);
+  await expect(page).toHaveURL(role === "creator" ? /\/creator$/ : /\/brand$/);
+}
+
+/** Like signUp, but stops on the agreements step (for consent tests). */
+export async function signUpToAgreements(page: Page, email: string, role: "creator" | "brand", password = TEST_PASSWORD) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -92,8 +99,7 @@ export async function signUp(page: Page, email: string, role: "creator" | "brand
   await expect(page).toHaveURL(/\/onboarding$/);
   await expect(page.getByText("Step 1 of 2")).toBeVisible();
   await page.getByRole("button", { name: role === "creator" ? /I'm a creator/ : /I'm a brand/ }).click();
-  await acceptConsents(page);
-  await expect(page).toHaveURL(role === "creator" ? /\/creator$/ : /\/brand$/);
+  await expect(page.getByRole("heading", { name: "A few agreements" })).toBeVisible();
 }
 
 /** Completes whatever onboarding steps an existing account still has (password and/or agreements). */

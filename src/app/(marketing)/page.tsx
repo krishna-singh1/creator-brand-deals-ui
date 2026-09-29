@@ -239,6 +239,9 @@ export default function Home() {
               <Link href="/legal/terms" className="link-underline w-fit text-zinc-700">Terms</Link>
               <Link href="/legal/privacy" className="link-underline w-fit text-zinc-700">Privacy</Link>
               <Link href="/legal/creator-code" className="link-underline w-fit text-zinc-700">Creator code</Link>
+              <Link href="/legal/brand-code" className="link-underline w-fit text-zinc-700">Brand code</Link>
+              <Link href="/legal/grievance" className="link-underline w-fit text-zinc-700">Grievance officer</Link>
+              <Link href="/legal/data-deletion" className="link-underline w-fit text-zinc-700">Deleting your data</Link>
             </div>
           </div>
         </Reveal>
