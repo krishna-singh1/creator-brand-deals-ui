@@ -33,7 +33,7 @@ export const privacy: LegalDoc = {
             <><Strong>Instagram (if you connect it):</Strong> your Instagram user ID, username, account type, follower and following counts, number of posts, and the likes and comments on your recent posts. We read them once when you verify. We don&apos;t keep the access token, can&apos;t post for you, and don&apos;t read your messages.</>,
             <><Strong>Brand profile:</Strong> brand name, logo, website, category, contact person, phone and email, and GSTIN if you add it.</>,
             <><Strong>Activity:</Strong> campaigns, applications, deals, deal messages, submissions and screenshots, payment records you report, ratings, disputes and notifications.</>,
-            <><Strong>Technical:</Strong> IP address and browser details for sign-in security, rate limiting and fraud prevention, and error logs.</>,
+            <><Strong>Technical:</Strong> IP address and browser details for sign-in security, rate limiting and fraud prevention, and error reports. When something breaks in your browser, the error report can include a short replay of the steps that led to it, with every text, input and image masked, so it shows clicks and page changes, not what you typed or saw. Error reports carry your account ID, never your email or name.</>,
           ]}
         />
       ),
@@ -81,7 +81,7 @@ export const privacy: LegalDoc = {
             "Brands see a creator's public profile: display name, photo, niches, city, languages, social handles, numbers, portfolio, ratings and reliability. Never the creator's legal name, date of birth, phone or email before a deal.",
             "After a deal is created, the brand and the creator see each other's contact details and the deal's messages and records.",
             `Our team sees what it needs to verify accounts, resolve disputes and keep the platform safe. Every admin action is logged.`,
-            "Service providers that run parts of the platform for us, under contracts that limit use to our instructions: hosting and database (Railway or Render, Neon), file storage (Cloudflare R2), email delivery (Brevo), sign-in with Google, Instagram (Meta) when you connect it, and error monitoring and product analytics tools.",
+            "Service providers that run parts of the platform for us, under contracts that limit use to our instructions: hosting and database (Railway or Render, Neon), file storage (Cloudflare R2), email delivery (Brevo), sign-in with Google, Instagram (Meta) when you connect it, error monitoring (Sentry), uptime monitoring (Better Stack, which only checks that our pages respond) and product analytics tools.",
             "Authorities, when the law requires it.",
             "We never sell your data or share it for advertising.",
           ]}
