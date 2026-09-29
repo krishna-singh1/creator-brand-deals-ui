@@ -4,7 +4,10 @@ import { acceptConsents, signUpToAgreements } from "./helpers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
 
-test("the agreements step links to the real documents at the version being accepted, and accepting records it", async ({ page }) => {
+test(
+  "the agreements step links to the real documents at the version being accepted, and accepting records it",
+  { tag: "@smoke" },
+  async ({ page }) => {
   await signUpToAgreements(page, `e2e-legal-${Date.now()}@example.com`, "brand");
 
   // What the API asks this user to accept (TERMS, PRIVACY, BRAND_CODE at their current versions).
@@ -36,7 +39,7 @@ test("the agreements step links to the real documents at the version being accep
   expect(after.onboarding.pendingConsents).toEqual([]);
 });
 
-test("every legal page has real content and the footer links to all of them", async ({ page }) => {
+test("every legal page has real content and the footer links to all of them", { tag: "@smoke" }, async ({ page }) => {
   await page.goto("/");
   const footer = page.getByRole("contentinfo");
   for (const name of ["Terms", "Privacy", "Creator code", "Brand code", "Grievance officer", "Deleting your data"]) {

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
 
 concurrency:
@@ -30,3 +30,131 @@ jobs:
       # Generated types must match the vendored contract (ADR 0009).
       - run: npm run api:check
       - run: npm run build
+
+  # The E2E job needs read access to the private API repo. Without the secret it is skipped (with a notice), so forks
+  # and fresh clones still get the checks above.
+  e2e-gate:
+    name: E2E prerequisites
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.API_REPO_READ_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::E2E skipped: add the API_REPO_READ_TOKEN secret (read-only Contents on creator-brand-deals)."
+          fi
+
+  e2e:
+    name: E2E (Playwright, real API)
+    needs: e2e-gate
+    if: needs.e2e-gate.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: branddeal
+          POSTGRES_USER: branddeal
+          POSTGRES_PASSWORD: branddeal
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U branddeal -d branddeal" --health-interval 5s --health-timeout 3s --health-retries 20
+      mailpit:
+        image: axllent/mailpit:v1.27
+        ports: ["1025:1025", "8025:8025"]
+      s3:
+        image: adobe/s3mock:5.2.2
+        env:
+          COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: branddeal-public,branddeal-private
+        ports: ["9090:9090"]
+    env:
+      API_REPO: krishna-singh1/creator-brand-deals
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+      E2E_BASE_URL: http://localhost:3000
+      MAILPIT_URL: http://localhost:8025
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same branch name in both repos = one feature (AGENTS.md): test against the API branch when it exists.
+      - name: Pick the API branch
+        id: api-ref
+        env:
+          TOKEN: ${{ secrets.API_REPO_READ_TOKEN }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads "https://x-access-token:${TOKEN}@github.com/${API_REPO}.git" "$BRANCH" > /dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=master" >> "$GITHUB_OUTPUT"
+          fi
+      - run: echo "::notice::E2E against API branch ${{ steps.api-ref.outputs.ref }}"
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.API_REPO }}
+          ref: ${{ steps.api-ref.outputs.ref }}
+          token: ${{ secrets.API_REPO_READ_TOKEN }}
+          path: api
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Build the API
+        working-directory: api
+        run: ./gradlew --no-daemon bootJar -x test --console=plain
+
+      - name: Start the API
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/branddeal
+          SMTP_HOST: localhost
+          SMTP_PORT: "1025"
+          COOKIE_SECURE: "false"
+          CORS_ALLOWED_ORIGINS: http://localhost:3000
+          APP_BASE_URL: http://localhost:3000
+          ADMIN_EMAILS: admin@branddeal.local
+          APP_OTP_RESEND_AFTER: 1s
+          APP_OTP_MAX_PER_EMAIL_WINDOW: "1000"
+          APP_OTP_MAX_PER_IP_HOUR: "100000"
+          APP_LOGIN_MAX_FAILURES_PER_IP_HOUR: "100000"
+        run: |
+          nohup java -jar api/build/libs/*.jar > api.log 2>&1 &
+          for i in $(seq 1 90); do
+            curl -sf http://localhost:8080/actuator/health/readiness > /dev/null && exit 0
+            sleep 2
+          done
+          echo "API didn't become ready"; tail -100 api.log; exit 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Build and start the web app
+        run: |
+          npm run build
+          nohup npx next start -p 3000 > web.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000 > /dev/null && exit 0; sleep 1; done
+          echo "Web didn't start"; tail -50 web.log; exit 1
+
+      - run: npx playwright test
+
+      - name: Upload report and logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-report
+          path: |
+            playwright-report
+            test-results
+            api.log
+            web.log
+          retention-days: 7
