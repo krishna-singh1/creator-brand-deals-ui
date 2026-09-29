@@ -1,0 +1,64 @@
+name: E2E smoke (staging)
+
+# Runs the @smoke specs against a deployed staging environment, before a release. Staging must send email to a
+# password-protected Mailpit (docs/12-deployment.md in the API repo), so the tests can read sign-in codes, and must
+# list the admin email below in ADMIN_EMAILS. Never point this at production: it creates accounts and campaigns.
+on:
+  workflow_dispatch:
+    inputs:
+      web_url:
+        description: Staging web origin, e.g. https://staging.branddeal.in
+        required: true
+      api_url:
+        description: Staging API base, e.g. https://api-staging.branddeal.in/api/v1
+        required: true
+      mailpit_url:
+        description: Staging Mailpit, e.g. https://mailpit-staging.up.railway.app
+        required: true
+      admin_email:
+        description: Bootstrap admin on staging (in its ADMIN_EMAILS)
+        default: admin@branddeal.local
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_BASE_URL: ${{ inputs.web_url }}
+      NEXT_PUBLIC_API_URL: ${{ inputs.api_url }}
+      MAILPIT_URL: ${{ inputs.mailpit_url }}
+      MAILPIT_AUTH: ${{ secrets.STAGING_MAILPIT_AUTH }}
+      E2E_ADMIN_EMAIL: ${{ inputs.admin_email }}
+      PRODUCTION_WEB_URL: ${{ vars.PRODUCTION_WEB_URL }}
+      PRODUCTION_API_URL: ${{ vars.PRODUCTION_API_URL }}
+    steps:
+      - name: Refuse production
+        run: |
+          for pair in "$E2E_BASE_URL|$PRODUCTION_WEB_URL" "$NEXT_PUBLIC_API_URL|$PRODUCTION_API_URL"; do
+            target="${pair%%|*}"; prod="${pair#*|}"
+            if [ -n "$prod" ] && [ "${target%/}" = "${prod%/}" ]; then
+              echo "::error::$target is production. The smoke test creates data; run it on staging only."; exit 1
+            fi
+          done
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --grep @smoke
+        env:
+          CI: "true"
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-staging-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7

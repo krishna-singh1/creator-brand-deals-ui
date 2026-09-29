@@ -57,6 +57,14 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 - Prefer `page.goto(url)` over clicking nav links right after a `reload()` (clicks can land before hydration).
 - Screenshots for design checks: write a temporary `e2e/zz-*.tmp.spec.ts`, run it, delete it.
 - `global-setup.ts` also sets the admin's password on a fresh database (otherwise admin pages stop at onboarding).
+- **CI runs the whole suite** (`.github/workflows/ci.yml`, job "E2E") on every PR and push to `master`: Postgres,
+  Mailpit and S3Mock as service containers, the API built from the API repo branch **with the same name** (else
+  `master`), `next start`, then `npx playwright test` (1 retry, HTML report + API/web logs uploaded on failure). It
+  needs the `API_REPO_READ_TOKEN` secret (fine-grained, read-only Contents on `creator-brand-deals`); without it the
+  job is skipped. Reproduce a CI failure locally: fresh database, `./gradlew bootJar` + `java -jar` with the same env
+  as the workflow, `npm run build && npx next start`, then `CI=true npx playwright test`.
+- Specs tagged `{ tag: "@smoke" }` form the staging smoke test (`e2e-staging.yml`, started by hand with the staging
+  URLs; `MAILPIT_AUTH` for a password-protected Mailpit). Keep the tag on a few end-to-end happy paths only.
 - Feature flags are global: specs must not leave one on. `instagram-verification.spec.ts` only switches
   INSTAGRAM_VERIFICATION on with `E2E_TOGGLE_FLAGS=1` and an API that has `INSTAGRAM_APP_ID/SECRET/REDIRECT_URI`
   (dummy values are fine); run that file alone, since screenshot submissions in parallel specs get 409 meanwhile.

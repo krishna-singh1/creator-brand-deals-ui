@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { createPassword, latestOtp, openProfileMenu, signIn, signOut } from "./helpers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
-test("creator signs up with email OTP, onboards, and lands on the creator home", async ({ page }) => {
+test("creator signs up with email OTP, onboards, and lands on the creator home", { tag: "@smoke" }, async ({ page }) => {
   const email = `e2e-creator-${Date.now()}@example.com`;
 
   await signIn(page, email);

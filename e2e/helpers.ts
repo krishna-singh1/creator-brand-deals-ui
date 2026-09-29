@@ -1,6 +1,10 @@
 import { expect, type Page } from "@playwright/test";
 
 const MAILPIT_URL = process.env.MAILPIT_URL ?? "http://localhost:8025";
+/** "user:password" when Mailpit is protected (staging: MP_UI_AUTH); empty locally and in CI. */
+const MAILPIT_HEADERS: Record<string, string> = process.env.MAILPIT_AUTH
+  ? { Authorization: `Basic ${Buffer.from(process.env.MAILPIT_AUTH).toString("base64")}` }
+  : {};
 
 /** 1×1 PNG, enough for upload flows. */
 export const PNG = {
@@ -18,7 +22,9 @@ export const PNG = {
  */
 export async function latestOtp(email: string, since = new Date(0)): Promise<string> {
   for (let i = 0; i < 40; i++) {
-    const res = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`);
+    const res = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`, {
+      headers: MAILPIT_HEADERS,
+    });
     const body = (await res.json()) as { messages: { Subject: string; Created: string }[] };
     const match = body.messages
       .filter((m) => new Date(m.Created).getTime() >= since.getTime() - 1000)
