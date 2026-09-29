@@ -56,6 +56,10 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 - The first sign-in right after an API restart can be slow and time out once; rerun before debugging.
 - Prefer `page.goto(url)` over clicking nav links right after a `reload()` (clicks can land before hydration).
 - Screenshots for design checks: write a temporary `e2e/zz-*.tmp.spec.ts`, run it, delete it.
+- `global-setup.ts` also sets the admin's password on a fresh database (otherwise admin pages stop at onboarding).
+- Feature flags are global: specs must not leave one on. `instagram-verification.spec.ts` only switches
+  INSTAGRAM_VERIFICATION on with `E2E_TOGGLE_FLAGS=1` and an API that has `INSTAGRAM_APP_ID/SECRET/REDIRECT_URI`
+  (dummy values are fine); run that file alone, since screenshot submissions in parallel specs get 409 meanwhile.
 
 ## Design system (look & feel)
 - Palette (Tailwind v4 `@theme` in `src/app/globals.css`): `ink` #121212, `ivory` #faf7f2, `cream`, `sand`, `gold` #b08d57

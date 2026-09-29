@@ -16,6 +16,7 @@ const TABS = [
   { href: "/admin/disputes", label: "Disputes" },
   { href: "/admin/pricing", label: "Pricing" },
   { href: "/admin/audit", label: "Audit log" },
+  { href: "/admin/settings", label: "Settings" },
 ];
 
 /** Admin area: session guard, app shell and the section tabs. */

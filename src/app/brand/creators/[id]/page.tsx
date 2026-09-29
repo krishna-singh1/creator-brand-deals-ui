@@ -14,6 +14,7 @@ import { useCategories } from "@/lib/catalog";
 import type { CreatorPublicProfile } from "@/lib/creators";
 import { errorMessage } from "@/lib/errors";
 import { DELIVERABLE_LABELS, formatCount, formatPaise } from "@/lib/format";
+import { isVerifiedSource, verifiedSourceLabel } from "@/lib/verification";
 
 export default function BrandCreatorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -56,7 +57,7 @@ function Profile({ id }: { id: string }) {
             <Stat label="Deals done" value={String(r.completed)} />
             <Stat label="Rating" value={c.ratingAvg ? `★ ${Number(c.ratingAvg).toFixed(1)}` : "—"} />
             <p className="flex flex-wrap gap-2 text-xs text-zinc-600 sm:col-span-4">
-              {c.metricSource === "ADMIN_VERIFIED" ? <span className="text-emerald-700">Metrics verified by BrandDeal.</span> : <span>Self-declared metrics.</span>}
+              {isVerifiedSource(c.metricSource) ? <span className="text-emerald-700">{verifiedSourceLabel(c.metricSource)}.</span> : <span>Self-declared metrics.</span>}
               {c.city && <span>Based in {c.city}.</span>}
               {c.languages && c.languages.length > 0 && <span>Creates in {c.languages.join(", ").toUpperCase()}.</span>}
               {r.cancelled > 0 && <span>{r.cancelled} deal{r.cancelled === 1 ? "" : "s"} cancelled by the creator.</span>}

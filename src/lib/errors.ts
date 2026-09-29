@@ -17,11 +17,17 @@ const MESSAGES: Partial<Record<string, string>> = {
   FILE_TOO_LARGE: "That file is too large (images up to 5 MB).",
   FILE_NOT_UPLOADED: "The upload didn't finish. Please upload the file again.",
   BRAND_NOT_VERIFIED: "BrandDeal is still verifying your brand. Publishing and invites unlock once you're verified.",
+  VERIFICATION_METHOD_DISABLED: "Verification has changed. Reload the page to see how to verify now.",
+  INSTAGRAM_NOT_PROFESSIONAL:
+    "Your Instagram is a personal account. Switch it to a Professional (Creator or Business) account in the Instagram app, then connect again.",
+  INSTAGRAM_ACCOUNT_IN_USE: "This Instagram account is already verified on another BrandDeal profile. Contact support if it's yours.",
+  INSTAGRAM_UNAVAILABLE: "Instagram couldn't be reached. Try again in a few minutes.",
 };
 
 const REASONS: Partial<Record<string, string>> = {
   PLATFORM_ALREADY_ADDED: "You've already added an account on this platform.",
   HANDLE_TAKEN: "This handle is already registered by another creator.",
+  INSTAGRAM_ACCOUNT_IN_USE: "This Instagram account is already verified on another BrandDeal profile.",
 };
 
 /** User-facing message for an error thrown by the API client (or an upload). */
@@ -36,6 +42,9 @@ export function errorMessage(error: unknown): string {
       return details.retryAfterSeconds < 60
         ? `Too many attempts. Try again in ${details.retryAfterSeconds} seconds.`
         : `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`;
+    }
+    if (error.code === "INSTAGRAM_HANDLE_MISMATCH" && typeof details?.connected === "string") {
+      return `You connected @${details.connected}, but your profile lists @${String(details.expected)}. Connect that account, or update the handle on your profile.`;
     }
     if (error.code === "PROFILE_INCOMPLETE" && Array.isArray(details?.missing)) {
       return `Complete your profile first: ${(details.missing as string[]).join(", ")}.`;

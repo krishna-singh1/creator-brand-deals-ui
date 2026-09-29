@@ -7,6 +7,7 @@ import { Button, Card, ErrorText, Field, Input, SectionTitle, Select, StatusBadg
 import { api, type components, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
 import { formatCount } from "@/lib/format";
+import { isVerifiedSource } from "@/lib/verification";
 
 type Account = components["schemas"]["SocialAccount"];
 type Platform = components["schemas"]["Platform"];
@@ -73,7 +74,7 @@ function AccountRow({ account, onDelete, onSaved }: { account: Account; onDelete
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <StatusBadge status={account.source === "ADMIN_VERIFIED" ? "VERIFIED" : "SELF_DECLARED"} />
+        <StatusBadge status={isVerifiedSource(account.source) ? "VERIFIED" : "SELF_DECLARED"} />
         <Button variant="secondary" className="h-9" onClick={() => setEditing(true)}>
           Edit
         </Button>

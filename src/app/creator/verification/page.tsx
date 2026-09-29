@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { InstagramChecks } from "@/components/instagram-checks";
 import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, SectionTitle, StatusBadge, Textarea } from "@/components/ui";
 import { api, ApiRequestError, unwrap } from "@/lib/api/client";
@@ -12,6 +13,7 @@ import { errorMessage } from "@/lib/errors";
 import { formatDateTime, humanizeMissing } from "@/lib/format";
 import { ME_KEY } from "@/lib/session";
 import { uploadFile } from "@/lib/upload";
+import { useVerificationMethod } from "@/lib/verification";
 
 export default function VerificationPage() {
   return (
@@ -38,7 +40,8 @@ function Verification() {
       }
     },
   });
-  if (!profile || latest.isPending) return <ContentSkeleton />;
+  const method = useVerificationMethod();
+  if (!profile || latest.isPending || method.isPending) return <ContentSkeleton />;
 
   const request = latest.data;
   const canSubmit = profile.status === "DRAFT" || profile.status === "REJECTED";
@@ -76,6 +79,11 @@ function Verification() {
           {request.status === "PENDING" && (
             <p className="mt-3 text-sm text-zinc-600">Our team usually reviews within 48 hours. We&apos;ll email you.</p>
           )}
+          {request.instagram && (
+            <div className="mt-5 border-t border-zinc-200 pt-5">
+              <InstagramChecks snapshot={request.instagram} />
+            </div>
+          )}
         </Card>
       )}
 
@@ -95,10 +103,44 @@ function Verification() {
               </Link>
             </p>
           </Card>
+        ) : method.data?.method === "INSTAGRAM" ? (
+          <ConnectInstagramCard />
         ) : (
           <SubmitForm />
         ))}
     </div>
+  );
+}
+
+/** Connect Instagram (D-36): the API gives a signed authorization URL; Instagram sends the creator back to
+ * /creator/verification/instagram. */
+function ConnectInstagramCard() {
+  const connect = useMutation({
+    mutationFn: () => unwrap(api.GET("/creator/verification/instagram/authorize")),
+    onSuccess: ({ authorizeUrl }) => window.location.assign(authorizeUrl),
+  });
+
+  return (
+    <Card>
+      <SectionTitle
+        title="Verify with Instagram"
+        subtitle="Connect the Instagram account on your profile. We read your follower count and the likes and comments on your recent posts once, to confirm your numbers. We don't post anything or keep access to your account."
+      />
+      <ul className="mb-5 flex list-disc flex-col gap-1 pl-5 text-sm text-zinc-600">
+        <li>
+          Your account must be a <strong className="font-medium text-ink">Professional</strong> account (Creator or Business).
+          In the Instagram app: Settings → Account type and tools → Switch to professional account. It&apos;s free.
+        </li>
+        <li>Sign in with the same handle that&apos;s on your BrandDeal profile.</li>
+        <li>Most accounts are verified straight away; others are checked by our team within 48 hours.</li>
+      </ul>
+      <div className="flex flex-wrap items-center gap-4">
+        <Button type="button" disabled={connect.isPending || connect.isSuccess} onClick={() => connect.mutate()}>
+          {connect.isPending || connect.isSuccess ? "Opening Instagram…" : "Connect Instagram"}
+        </Button>
+        <ErrorText>{connect.isError && errorMessage(connect.error)}</ErrorText>
+      </div>
+    </Card>
   );
 }
 
