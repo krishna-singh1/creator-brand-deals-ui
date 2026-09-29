@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { ADMIN_STATE, createVerifiedCreator } from "./api-fixtures";
 import { signInWithPassword, signUp } from "./helpers";
 
-test("brand publishes a campaign; a verified creator applies; the brand approves into a deal", async ({ browser }) => {
+test("brand publishes a campaign; a verified creator applies; the brand approves into a deal", { tag: "@smoke" }, async ({ browser }) => {
   test.setTimeout(180_000); // multi-page flow; first visits compile pages in dev
   const title = `Monsoon chai ritual ${Date.now().toString(36)}`;
 
