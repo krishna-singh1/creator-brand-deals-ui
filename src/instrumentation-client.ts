@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 
+import { initAnalytics } from "@/lib/analytics";
 import { SENTRY_BASE_OPTIONS, SENTRY_DSN } from "@/lib/monitoring";
 
 // Browser error monitoring. Session replay records only sessions that hit an error, with every text, input and media
@@ -12,5 +13,8 @@ if (SENTRY_DSN) {
     replaysOnErrorSampleRate: 1.0,
   });
 }
+
+// Product analytics (off without NEXT_PUBLIC_POSTHOG_KEY): page views and a few browser-only events.
+initAnalytics();
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

@@ -1627,6 +1627,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Funnels and deal economics for a period (from BrandDeal's own data)
+         * @description Funnels follow one group: the creators (or brands) who joined in the last `days` days, and how many of them have reached each step **by now**. Deal economics cover deals created in the period. Money is in paise.
+         */
+        get: operations["adminGetInsights"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2637,6 +2657,51 @@ export interface components {
             deals: number;
             completedDeals: number;
             declaredGmvPaise?: components["schemas"]["Paise"];
+        };
+        AdminInsights: {
+            days: number;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            /** @description Accounts created in the period, and how many still haven't chosen creator or brand */
+            signups: {
+                total: number;
+                noRoleYet: number;
+            };
+            /** @description Steps in order: SIGNED_UP, PROFILE_COMPLETE, VERIFICATION_SUBMITTED, VERIFIED, APPLIED, DEAL, DEAL_COMPLETED */
+            creatorFunnel: components["schemas"]["FunnelStepCount"][];
+            /** @description Steps in order: SIGNED_UP, PROFILE_COMPLETE, VERIFIED, CAMPAIGN_PUBLISHED, GOT_APPLICANT, DEAL, DEAL_COMPLETED */
+            brandFunnel: components["schemas"]["FunnelStepCount"][];
+            deals: components["schemas"]["DealEconomics"];
+        };
+        FunnelStepCount: {
+            /** @enum {string} */
+            step: "SIGNED_UP" | "PROFILE_COMPLETE" | "VERIFICATION_SUBMITTED" | "VERIFIED" | "APPLIED" | "CAMPAIGN_PUBLISHED" | "GOT_APPLICANT" | "DEAL" | "DEAL_COMPLETED";
+            count: number;
+        };
+        /** @description Deals created in the period */
+        DealEconomics: {
+            created: number;
+            /** @description Of the deals created in the period, completed by now */
+            completed: number;
+            cancelled: number;
+            /** @description Deals with at least one dispute raised */
+            disputed: number;
+            /** @description Deals by compensation type: cash only */
+            cash: number;
+            /** @description Barter (product only) */
+            product: number;
+            productPlusCash: number;
+            /** @description Brands with at least one deal created in the period */
+            activeBrands: number;
+            /** @description Deals whose brand and creator already had an earlier deal */
+            repeatPairDeals: number;
+            averageCashPaise?: components["schemas"]["Paise"];
+            medianCashPaise?: components["schemas"]["Paise"];
+            /** @description From deal creation to completion, for those completed */
+            medianDaysToComplete?: number;
+            declaredPaymentsPaise?: components["schemas"]["Paise"];
         };
         MyApplicationPage: {
             items: components["schemas"]["MyApplication"][];
@@ -5844,6 +5909,31 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    adminGetInsights: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Insights */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInsights"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["Unprocessable"];
         };
     };
 }

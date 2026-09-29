@@ -69,6 +69,7 @@ export default function Home() {
             <div className="flex animate-fade-up flex-wrap items-center gap-4 [animation-delay:800ms]">
               <Link
                 href="/login"
+                data-analytics-cta="hero_get_started"
                 className="group inline-flex h-14 items-center gap-3 rounded-full bg-ink pl-7 pr-2 text-sm font-medium tracking-wide text-ivory shadow-lift transition-all duration-500 ease-[var(--ease-premium)] hover:-translate-y-0.5 hover:shadow-gold"
               >
                 Get started
@@ -76,7 +77,7 @@ export default function Home() {
                   →
                 </span>
               </Link>
-              <Link href="/login" className="link-underline pb-0.5 text-sm font-medium text-ink">
+              <Link href="/login" data-analytics-cta="hero_sign_in" className="link-underline pb-0.5 text-sm font-medium text-ink">
                 Sign in
               </Link>
             </div>
@@ -213,6 +214,7 @@ export default function Home() {
           </p>
           <Link
             href="/login"
+            data-analytics-cta="closing_begin"
             className="inline-flex h-14 items-center rounded-full bg-gold px-10 text-sm font-medium tracking-wide text-ink shadow-soft transition-all duration-500 ease-[var(--ease-premium)] hover:-translate-y-1 hover:bg-gold-soft hover:shadow-gold"
           >
             Begin with your email

@@ -1,9 +1,11 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { identifyUser } from "@/lib/analytics";
 import { ApiRequestError } from "@/lib/api/client";
+import { useMe } from "@/lib/session";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -18,5 +20,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }),
   );
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AnalyticsIdentity />
+      {children}
+    </QueryClientProvider>
+  );
+}
+
+/** Keeps analytics linked to the signed-in account (ID + role), or forgets it after sign-out. */
+function AnalyticsIdentity() {
+  const { data: me } = useMe();
+  useEffect(() => identifyUser(me), [me]);
+  return null;
 }
