@@ -50,7 +50,7 @@ export function RequireSession({
   if (me.status === "SUSPENDED") {
     return (
       <CenteredMessage>
-        This account is suspended. If you think this is a mistake, contact support@branddeal.in.
+        This account is suspended. If you think this is a mistake, contact support@{PRODUCT.domain}.
       </CenteredMessage>
     );
   }
