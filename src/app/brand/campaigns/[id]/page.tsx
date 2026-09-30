@@ -16,6 +16,8 @@ import { isVerified, useBrandProfile } from "@/lib/brand";
 import { formatDeadline } from "@/lib/campaigns";
 import { errorMessage } from "@/lib/errors";
 
+import { PRODUCT } from "@/lib/product";
+
 export default function BrandCampaignPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   return (
@@ -87,7 +89,7 @@ function Detail({ id }: { id: string }) {
             <Button
               onClick={() => publish.mutate()}
               disabled={publish.isPending || !verified}
-              title={verified ? undefined : "Publishing unlocks once BrandDeal verifies your brand"}
+              title={verified ? undefined : `Publishing unlocks once ${PRODUCT.name} verifies your brand`}
             >
               {publish.isPending ? "Publishing…" : "Publish campaign"}
             </Button>
@@ -140,7 +142,7 @@ function Detail({ id }: { id: string }) {
           </Button>
         )}
         {c.status === "UNPUBLISHED_BY_ADMIN" && (
-          <p className="text-sm text-red-700">Taken down by BrandDeal for breaking the guidelines. It can&apos;t be reopened.</p>
+          <p className="text-sm text-red-700">Taken down by {PRODUCT.name} for breaking the guidelines. It can&apos;t be reopened.</p>
         )}
         <ErrorText>{error && errorMessage(error)}</ErrorText>
       </div>

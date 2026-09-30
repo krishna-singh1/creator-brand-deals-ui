@@ -8,16 +8,18 @@ import { type Deal, DISPUTE_OUTCOMES, DISPUTE_REASONS, type DisputeReason, useDe
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 
+import { PRODUCT } from "@/lib/product";
+
 const MIN = 20;
 
-/** While disputed: what was raised. After resolution: BrandDeal's decision. */
+/** While disputed: what was raised. After resolution: ExposureStreet's decision. */
 export function DisputeBanner({ deal }: { deal: Deal }) {
   const d = deal.dispute;
   if (!d) return null;
   if (d.status === "OPEN") {
     return (
       <Card tone="warning">
-        <p className="font-display text-2xl text-ink">Paused: BrandDeal is looking into an issue</p>
+        <p className="font-display text-2xl text-ink">Paused: {PRODUCT.name} is looking into an issue</p>
         <p className="mt-1 text-sm text-zinc-700">
           {d.raisedBy?.displayName ?? "A party"} reported: {DISPUTE_REASONS[d.reason]}. Deal steps are paused until our team
           resolves it; you can still message each other below.
@@ -29,7 +31,7 @@ export function DisputeBanner({ deal }: { deal: Deal }) {
   }
   return (
     <Card>
-      <p className="font-display text-xl text-ink">Issue resolved by BrandDeal</p>
+      <p className="font-display text-xl text-ink">Issue resolved by {PRODUCT.name}</p>
       <p className="mt-1 text-sm text-zinc-700">
         {d.outcome ? DISPUTE_OUTCOMES[d.outcome] : ""} {d.resolution}
       </p>
@@ -37,7 +39,7 @@ export function DisputeBanner({ deal }: { deal: Deal }) {
   );
 }
 
-/** Either party can ask BrandDeal to step in while the deal is in progress. */
+/** Either party can ask ExposureStreet to step in while the deal is in progress. */
 export function ReportProblem({ deal }: { deal: Deal }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<DisputeReason>("OTHER");
@@ -50,7 +52,7 @@ export function ReportProblem({ deal }: { deal: Deal }) {
   if (!open) {
     return (
       <button type="button" className="self-start text-sm text-zinc-500 underline-offset-4 hover:text-ink hover:underline" onClick={() => setOpen(true)}>
-        Report a problem to BrandDeal
+        Report a problem to {PRODUCT.name}
       </button>
     );
   }
@@ -84,7 +86,7 @@ export function ReportProblem({ deal }: { deal: Deal }) {
         <ErrorText>{raise.isError && errorMessage(raise.error)}</ErrorText>
         <div className="flex flex-wrap gap-3">
           <Button type="submit" variant="danger" disabled={description.trim().length < MIN || raise.isPending}>
-            {raise.isPending ? "Sending…" : "Send to BrandDeal"}
+            {raise.isPending ? "Sending…" : `Send to ${PRODUCT.name}`}
           </Button>
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
             Cancel

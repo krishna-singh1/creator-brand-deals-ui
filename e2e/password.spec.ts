@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { PRODUCT } from "@/lib/product";
 import { latestOtp, openProfileMenu, signInWithPassword, signOut, signUp, TEST_PASSWORD } from "./helpers";
 
 test("returning user signs in with email and password, no code", async ({ page }) => {
@@ -20,7 +21,7 @@ test("new email with a weak password is stopped before any code is sent", async 
   await page.getByLabel("Password", { exact: true }).fill("password123");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByText("too easy to guess")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sign in to BrandDeal" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Sign in to ${PRODUCT.name}` })).toBeVisible();
 });
 
 test("forgot password: reset with an emailed code, then sign in with the new password", async ({ page }) => {

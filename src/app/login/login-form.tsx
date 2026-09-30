@@ -12,6 +12,7 @@ import { api, type Me, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
 import { homeFor, needsOnboarding, useMe, useSetMe } from "@/lib/session";
 
+import { PRODUCT } from "@/lib/product";
 import { GoogleButton } from "./google-button";
 
 /**
@@ -102,7 +103,7 @@ export function LoginForm() {
   const heading: Record<Mode, { eyebrow: string; title: string; body: ReactNode }> = {
     password: {
       eyebrow: "Welcome",
-      title: "Sign in to BrandDeal",
+      title: `Sign in to ${PRODUCT.name}`,
       body: "New here? Enter your email and choose a password. We'll verify your email with a quick code, just once.",
     },
     verify: {

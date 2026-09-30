@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Card } from "@/components/ui";
 import { type BrandProfile, useBrandProfile } from "@/lib/brand";
 
+import { PRODUCT } from "@/lib/product";
+
 const COPY: Record<string, { title: string; body: (p: BrandProfile) => string; cta?: string }> = {
   UNSUBMITTED: {
     title: "Complete your profile to get verified",
-    body: () => "BrandDeal checks every brand before its campaigns go live. Finish your profile and we'll review it.",
+    body: () => `${PRODUCT.name} checks every brand before its campaigns go live. Finish your profile and we'll review it.`,
     cta: "Complete profile",
   },
   PENDING: {

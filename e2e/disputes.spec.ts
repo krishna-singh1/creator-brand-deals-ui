@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { PRODUCT } from "@/lib/product";
 import { ADMIN_STATE, createApprovedDeal } from "./api-fixtures";
 import { signInWithPassword } from "./helpers";
 
@@ -12,12 +13,12 @@ test("a creator reports a problem, the deal pauses, and an admin resolves it", a
   await signInWithPassword(creator, creatorEmail);
   await expect(creator).toHaveURL(/\/creator$/);
   await creator.goto(`/deals/${dealId}`);
-  await creator.getByRole("button", { name: "Report a problem to BrandDeal" }).click();
+  await creator.getByRole("button", { name: `Report a problem to ${PRODUCT.name}` }).click();
   await creator.getByLabel("What went wrong").selectOption("PRODUCT_NOT_RECEIVED");
   await creator.getByLabel("Details").fill("The brand said the kulfi kit shipped last week but nothing has arrived yet.");
-  await creator.getByRole("button", { name: "Send to BrandDeal" }).click();
-  await expect(creator.getByText("Paused: BrandDeal is looking into an issue")).toBeVisible();
-  await expect(creator.getByRole("button", { name: "Report a problem to BrandDeal" })).toBeHidden();
+  await creator.getByRole("button", { name: `Send to ${PRODUCT.name}` }).click();
+  await expect(creator.getByText(`Paused: ${PRODUCT.name} is looking into an issue`)).toBeVisible();
+  await expect(creator.getByRole("button", { name: `Report a problem to ${PRODUCT.name}` })).toBeHidden();
 
   const brand = await (await browser.newContext()).newPage();
   await signInWithPassword(brand, brandEmail);
@@ -35,7 +36,7 @@ test("a creator reports a problem, the deal pauses, and an admin resolves it", a
   await expect(admin.getByText(title, { exact: true })).toBeHidden();
 
   await creator.reload();
-  await expect(creator.getByText("Issue resolved by BrandDeal").first()).toBeVisible();
+  await expect(creator.getByText(`Issue resolved by ${PRODUCT.name}`).first()).toBeVisible();
   await expect(creator.getByText("Courier confirmed delivery tomorrow; carry on.", { exact: false })).toBeVisible();
-  await expect(creator.getByRole("button", { name: "Report a problem to BrandDeal" })).toBeVisible();
+  await expect(creator.getByRole("button", { name: `Report a problem to ${PRODUCT.name}` })).toBeVisible();
 });

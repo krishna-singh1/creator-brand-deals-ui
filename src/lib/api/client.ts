@@ -5,7 +5,7 @@ import type { components, paths } from "./schema";
 export type { components };
 
 /**
- * Typed client for the BrandDeal API (contract synced from the API repo, ADR 0009).
+ * Typed client for the ExposureStreet API (contract synced from the API repo, ADR 0009).
  * The API is a separate deployment: the browser calls it directly with cookies (ADR 0008), or through this app's
  * same-origin proxy when NEXT_PUBLIC_API_URL is the relative path "/api/v1" (see API_ORIGIN in next.config.ts).
  */

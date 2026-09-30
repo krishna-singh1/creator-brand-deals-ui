@@ -28,7 +28,8 @@ export async function latestOtp(email: string, since = new Date(0)): Promise<str
     const body = (await res.json()) as { messages: { Subject: string; Created: string }[] };
     const match = body.messages
       .filter((m) => new Date(m.Created).getTime() >= since.getTime() - 1000)
-      .map((m) => /^(\d{6}) is your BrandDeal login code/.exec(m.Subject))
+      // Deliberately not tied to the product name: the API injects it into the subject (BRAND_NAME).
+      .map((m) => /^(\d{6}) is your .+ login code/.exec(m.Subject))
       .find(Boolean);
     if (match) return match[1];
     await new Promise((r) => setTimeout(r, 500));

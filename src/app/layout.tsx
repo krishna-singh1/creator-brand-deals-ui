@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
+import { PRODUCT } from "@/lib/product";
 import { Providers } from "./providers";
 
 const inter = Inter({
@@ -17,7 +18,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "BrandDeal: curated brand partnerships for India's finest creators",
+  title: `${PRODUCT.name}: curated brand partnerships for India's finest creators`,
   description:
     "An invitation-quality marketplace where India's D2C brands meet verified micro-creators. Fair pricing, refined collaborations, every deal tracked end to end.",
 };

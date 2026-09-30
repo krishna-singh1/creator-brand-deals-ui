@@ -9,6 +9,8 @@ import { RequireSession } from "@/components/require-session";
 import { PageTitle, Skeleton } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
 
+import { PRODUCT } from "@/lib/product";
+
 export default function BrandHome() {
   return (
     <RequireSession role="BRAND">
@@ -27,7 +29,7 @@ function Dashboard({ name }: { name?: string }) {
     <div className="flex flex-col gap-10">
       <PageTitle
         eyebrow="Brand suite"
-        title={name ? `Welcome, ${name}` : "Welcome to BrandDeal"}
+        title={name ? `Welcome, ${name}` : `Welcome to ${PRODUCT.name}`}
         subtitle="Shape your brand presence, then brief verified creators who genuinely belong in your world."
       />
       <BrandVerificationNotice />

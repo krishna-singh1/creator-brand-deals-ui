@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { PRODUCT } from "@/lib/product";
 import { createPassword, latestOtp, openProfileMenu, signIn, signOut } from "./helpers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
@@ -42,7 +43,7 @@ test("creator signs up with email OTP, onboards, and lands on the creator home",
 
   await signOut(page);
   await expect(page).toHaveURL(/\/login(\?|$)/);
-  await expect(page.getByRole("heading", { name: "Sign in to BrandDeal" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Sign in to ${PRODUCT.name}` })).toBeVisible();
   await page.goto("/creator");
   await expect(page).toHaveURL(/\/login\?next=%2Fcreator$/);
 });

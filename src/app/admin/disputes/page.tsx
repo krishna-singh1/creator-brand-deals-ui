@@ -10,6 +10,7 @@ import { DISPUTE_OUTCOMES, DISPUTE_REASONS } from "@/lib/deals";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime, formatPaise } from "@/lib/format";
 
+import { PRODUCT } from "@/lib/product";
 import { useCursorList } from "../admin-bits";
 import { AdminShell } from "../admin-shell";
 
@@ -37,7 +38,7 @@ function Disputes() {
   );
   return (
     <div className="flex flex-col gap-8">
-      <PageTitle eyebrow="Admin" title="Disputes" subtitle="Deals paused because a brand or creator asked BrandDeal to step in. Oldest first.">
+      <PageTitle eyebrow="Admin" title="Disputes" subtitle={`Deals paused because a brand or creator asked ${PRODUCT.name} to step in. Oldest first.`}>
         <Select className="w-44" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
           <option value="OPEN">Open</option>
           <option value="RESOLVED">Resolved</option>

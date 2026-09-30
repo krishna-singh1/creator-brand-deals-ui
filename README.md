@@ -39,6 +39,6 @@ APP_OTP_RESEND_AFTER=1s APP_OTP_MAX_PER_EMAIL_WINDOW=1000 APP_OTP_MAX_PER_IP_HOU
 
 ## Deploy (Vercel)
 
-Set `NEXT_PUBLIC_API_URL` per environment (e.g. `https://api.branddeal.in/api/v1`). Use a custom domain on the same
-parent domain as the API (e.g. `app.branddeal.in`) so auth cookies work. Add that origin to the API's
+Set `NEXT_PUBLIC_API_URL` per environment (e.g. `https://api.exposurestreet.com/api/v1`). Use a custom domain on the same
+parent domain as the API (e.g. `app.exposurestreet.com`) so auth cookies work. Add that origin to the API's
 `CORS_ALLOWED_ORIGINS`.

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 
+import { PRODUCT } from "@/lib/product";
 import { ClosingCta, FeatureGrid, PageHero, PlainNote, SectionHeading, StepList, type Feature, type Step } from "../marketing-bits";
 
 export const metadata: Metadata = {
-  title: "For brands — BrandDeal",
+  title: `For brands — ${PRODUCT.name}`,
   description:
     "Brief once and hear from hand-verified micro-creators across India. Suggested budgets before you publish, match scores on every applicant, and one timeline from shipping to payment.",
 };
@@ -50,7 +51,7 @@ export default function BrandsPage() {
             Briefs that attract the <span className="italic text-gold-deep">right voices.</span>
           </>
         }
-        lede="BrandDeal is a curated marketplace for India's D2C labels. Write one brief, hear from verified micro-creators who actually fit it, and keep every collaboration in one place."
+        lede={`${PRODUCT.name} is a curated marketplace for India's D2C labels. Write one brief, hear from verified micro-creators who actually fit it, and keep every collaboration in one place.`}
         ctaLabel="Request brand access"
         ctaName="brands_hero_request"
       />
@@ -85,7 +86,7 @@ export default function BrandsPage() {
             </p>
             <p>
               Payment happens directly between you and the creator — we record the agreed amount and both confirmations rather than
-              holding funds. BrandDeal is free while we are in beta.
+              holding funds. {PRODUCT.name} is free while we are in beta.
             </p>
           </PlainNote>
         </div>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { Reveal } from "@/components/motion";
 
+import { PRODUCT } from "@/lib/product";
+
 const LEGAL = [
   ["/legal/terms", "Terms"],
   ["/legal/privacy", "Privacy"],
@@ -38,7 +40,7 @@ export function SiteFooter() {
         </div>
       </Reveal>
       <div className="border-t border-zinc-200/70 py-6 text-center text-xs tracking-wide text-zinc-500">
-        © {new Date().getFullYear()} BrandDeal. Crafted in India.
+        © {new Date().getFullYear()} {PRODUCT.name}. Crafted in India.
       </div>
     </footer>
   );

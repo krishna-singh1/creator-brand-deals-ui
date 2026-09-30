@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { PRODUCT } from "@/lib/product";
+
 /** Public, static pages: these need no API and no signed-in state. */
 
 test("the landing page sends each audience to its own page", async ({ page }) => {
@@ -20,7 +22,7 @@ test("the creator page explains the steps and is honest about payment", async ({
     await expect(page.getByRole("heading", { name: step })).toBeVisible();
   }
   // Payments are off-platform (D-01), so the page must say so rather than implying we hold the money.
-  await expect(page.getByText("BrandDeal does not hold your money")).toBeVisible();
+  await expect(page.getByText(`${PRODUCT.name} does not hold your money`)).toBeVisible();
   await expect(page.getByText("no commission during the beta")).toBeVisible();
 });
 

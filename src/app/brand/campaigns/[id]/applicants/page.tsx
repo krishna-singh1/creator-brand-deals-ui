@@ -15,6 +15,8 @@ import { errorMessage } from "@/lib/errors";
 import { DELIVERABLE_LABELS, formatCount, formatPaise, rupeesToPaise } from "@/lib/format";
 import { isVerifiedSource, verifiedSourceLabel } from "@/lib/verification";
 
+import { PRODUCT } from "@/lib/product";
+
 type Sort = "NEWEST" | "MATCH" | "FOLLOWERS" | "ENGAGEMENT" | "PRICE_ASC";
 
 export default function ApplicantsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -286,10 +288,10 @@ function ApproveForm({
   );
 }
 
-/** Track record on BrandDeal, so brands can spot creators who often cancel. */
+/** Track record on ExposureStreet, so brands can spot creators who often cancel. */
 function Reliability({ creator }: { creator: Applicant["creator"] }) {
   const r = reliability(creator);
-  if (r.isNew) return <span className="text-xs text-zinc-500">New to BrandDeal: no completed deals yet</span>;
+  if (r.isNew) return <span className="text-xs text-zinc-500">New to {PRODUCT.name}: no completed deals yet</span>;
   return (
     <span className="flex flex-wrap items-center gap-2 text-xs text-zinc-600">
       {r.completed} deal{r.completed === 1 ? "" : "s"} completed

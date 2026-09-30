@@ -35,7 +35,7 @@ test("brand publishes a campaign; a verified creator applies; the brand approves
 
   await expect(brand.getByRole("heading", { name: title })).toBeVisible();
 
-  // New brands wait for BrandDeal to verify them before publishing.
+  // New brands wait for ExposureStreet to verify them before publishing.
   await expect(brand.getByText("We're verifying your brand")).toBeVisible();
   await expect(brand.getByRole("button", { name: "Publish campaign" })).toBeDisabled();
   const admin = await (await browser.newContext({ storageState: ADMIN_STATE })).newPage();

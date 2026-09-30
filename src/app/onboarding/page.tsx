@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 
 import { AuthLayout } from "@/components/auth-layout";
 
+import { PRODUCT } from "@/lib/product";
 import { OnboardingFlow } from "./onboarding-flow";
 
 export const metadata: Metadata = {
-  title: "Get started · BrandDeal",
+  title: `Get started · ${PRODUCT.name}`,
   robots: { index: false },
 };
 

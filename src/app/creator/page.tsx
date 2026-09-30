@@ -9,6 +9,8 @@ import { RequireSession } from "@/components/require-session";
 import { Card, PageTitle, Skeleton, StatusBadge } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
 
+import { PRODUCT } from "@/lib/product";
+
 export default function CreatorHome() {
   return (
     <RequireSession role="CREATOR">
@@ -27,7 +29,7 @@ function Dashboard({ name }: { name?: string }) {
     <div className="flex flex-col gap-10">
       <PageTitle
         eyebrow="Creator studio"
-        title={name ? `Good to see you, ${name}` : "Welcome to BrandDeal"}
+        title={name ? `Good to see you, ${name}` : `Welcome to ${PRODUCT.name}`}
         subtitle="Your profile, your verification and, soon, the briefs curated for your niche, all in one place."
       >
         {data && <StatusBadge status={data.status} />}
