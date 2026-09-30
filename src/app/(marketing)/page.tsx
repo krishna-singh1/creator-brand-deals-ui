@@ -1,12 +1,10 @@
 import Link from "next/link";
 
-import { Logo } from "@/components/logo";
 import { AnimatedWords, Counter, Parallax, Reveal } from "@/components/motion";
 import { Eyebrow } from "@/components/ui";
 
 import { HeroVisual } from "./hero-visual";
 import { LaunchNiches } from "./launch-niches";
-import { SiteHeader } from "./site-header";
 import { SpotlightCard } from "./spotlight-card";
 import { Stories } from "./stories";
 
@@ -33,23 +31,28 @@ const PILLARS = [
   },
 ];
 
-const BRAND_STEPS = [
-  ["Brief with intent", "Describe the product, the deliverables and the creators you want, down to niche, city and follower range."],
-  ["Receive considered applications", "Verified creators apply with a pitch and a quote shown beside our suggested range."],
-  ["Approve and collaborate", "Approve in a click. Contacts, timelines and approvals move into a single deal view."],
-];
-
-const CREATOR_STEPS = [
-  ["Present your craft", "Build a profile that shows your niche, audience and portfolio at their best."],
-  ["Get verified", "Share your Insights once. Our team reviews within 48 hours, and the badge speaks for you."],
-  ["Choose your collaborations", "Apply to briefs that fit, quote with confidence, and get paid exactly what you agreed."],
+const PATHS = [
+  {
+    href: "/brands",
+    cta: "path_brands",
+    eyebrow: "For brands",
+    title: "Briefs that attract the right voices",
+    body: "Write one brief, see a suggested budget before you publish, and hear from verified creators who actually fit it.",
+    linkLabel: "How it works for brands",
+  },
+  {
+    href: "/creators",
+    cta: "path_creators",
+    eyebrow: "For creators",
+    title: "Your work, valued properly",
+    body: "Get verified once, then choose the collaborations worth your name. Every brief arrives with a range built from your real engagement.",
+    linkLabel: "How it works for creators",
+  },
 ];
 
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col overflow-x-clip">
-      <SiteHeader />
-
+    <>
       {/* ── Hero ── */}
       <section className="relative isolate pb-24 pt-36 sm:pt-44">
         <Parallax speed={0.25} className="absolute inset-0 -z-10">
@@ -133,33 +136,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── How it works ── */}
+      {/* ── Two paths ── */}
       <section id="how" className="scroll-mt-24 bg-white/60 py-28">
-        <div className="mx-auto grid max-w-6xl gap-20 px-6 lg:grid-cols-2">
-          {[
-            { id: "brands", eyebrow: "For brands", title: "Briefs that attract the right voices", steps: BRAND_STEPS },
-            { id: "creators", eyebrow: "For creators", title: "Your work, valued properly", steps: CREATOR_STEPS },
-          ].map((col) => (
-            <div key={col.id} id={col.id} className="scroll-mt-28">
-              <Reveal className="flex flex-col gap-4">
-                <Eyebrow>{col.eyebrow}</Eyebrow>
-                <h2 className="font-display text-3xl leading-tight tracking-tight sm:text-4xl">{col.title}</h2>
-              </Reveal>
-              <ol className="mt-10 flex flex-col">
-                {col.steps.map(([title, body], i) => (
-                  <Reveal key={title} as="li" delay={i * 120} className="group flex gap-6 border-t border-zinc-200 py-7 last:border-b">
-                    <span className="font-display text-2xl italic text-gold transition-transform duration-500 group-hover:translate-x-1">
-                      0{i + 1}
+        <div className="mx-auto max-w-6xl px-6">
+          <Reveal className="mx-auto mb-14 flex max-w-2xl flex-col items-center gap-5 text-center">
+            <Eyebrow>How it works</Eyebrow>
+            <h2 className="font-display text-4xl leading-tight tracking-tight sm:text-5xl">
+              Two sides, <span className="italic text-gold-deep">one standard</span>
+            </h2>
+          </Reveal>
+          <div className="grid gap-6 sm:grid-cols-2">
+            {PATHS.map((p, i) => (
+              <Reveal key={p.href} delay={i * 110}>
+                <Link
+                  href={p.href}
+                  data-analytics-cta={p.cta}
+                  className="group flex h-full flex-col gap-4 rounded-3xl border border-zinc-200 bg-ivory p-9 transition-all duration-500 ease-[var(--ease-premium)] hover:-translate-y-1 hover:border-gold/40 hover:shadow-lift"
+                >
+                  <Eyebrow>{p.eyebrow}</Eyebrow>
+                  <h3 className="font-display text-3xl leading-tight tracking-tight">{p.title}</h3>
+                  <p className="leading-relaxed text-zinc-600">{p.body}</p>
+                  <span className="mt-auto inline-flex items-center gap-2 pt-4 text-sm font-medium text-ink">
+                    {p.linkLabel}
+                    <span aria-hidden className="transition-transform duration-500 ease-[var(--ease-premium)] group-hover:translate-x-1">
+                      →
                     </span>
-                    <div>
-                      <h3 className="text-lg font-medium text-ink">{title}</h3>
-                      <p className="mt-2 leading-relaxed text-zinc-600">{body}</p>
-                    </div>
-                  </Reveal>
-                ))}
-              </ol>
-            </div>
-          ))}
+                  </span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -222,35 +228,6 @@ export default function Home() {
         </Reveal>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-zinc-200 bg-cream/50">
-        <Reveal variant="fade" className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-14 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex max-w-xs flex-col gap-4">
-            <Logo />
-            <p className="text-sm leading-relaxed text-zinc-600">Curated brand partnerships for India&apos;s finest micro-creators.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-10 text-sm">
-            <div className="flex flex-col gap-3">
-              <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Platform</span>
-              <a href="#brands" className="link-underline w-fit text-zinc-700">For brands</a>
-              <a href="#creators" className="link-underline w-fit text-zinc-700">For creators</a>
-              <Link href="/login" className="link-underline w-fit text-zinc-700">Sign in</Link>
-            </div>
-            <div className="flex flex-col gap-3">
-              <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Legal</span>
-              <Link href="/legal/terms" className="link-underline w-fit text-zinc-700">Terms</Link>
-              <Link href="/legal/privacy" className="link-underline w-fit text-zinc-700">Privacy</Link>
-              <Link href="/legal/creator-code" className="link-underline w-fit text-zinc-700">Creator code</Link>
-              <Link href="/legal/brand-code" className="link-underline w-fit text-zinc-700">Brand code</Link>
-              <Link href="/legal/grievance" className="link-underline w-fit text-zinc-700">Grievance officer</Link>
-              <Link href="/legal/data-deletion" className="link-underline w-fit text-zinc-700">Deleting your data</Link>
-            </div>
-          </div>
-        </Reveal>
-        <div className="border-t border-zinc-200/70 py-6 text-center text-xs tracking-wide text-zinc-500">
-          © {new Date().getFullYear()} BrandDeal. Crafted in India.
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }

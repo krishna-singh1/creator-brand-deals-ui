@@ -6,11 +6,12 @@ import { useState } from "react";
 import { Logo } from "@/components/logo";
 import { useScrolled } from "@/components/motion";
 
+/** Anchors are absolute so they also work from the secondary marketing pages. */
 const LINKS = [
-  { href: "#brands", label: "For brands" },
-  { href: "#creators", label: "For creators" },
-  { href: "#how", label: "How it works" },
-  { href: "#stories", label: "Stories" },
+  { href: "/brands", label: "For brands" },
+  { href: "/creators", label: "For creators" },
+  { href: "/#how", label: "How it works" },
+  { href: "/#stories", label: "Stories" },
 ];
 
 /** Transparent over the hero, then a frosted ivory bar once the page scrolls. */
@@ -28,9 +29,9 @@ export function SiteHeader() {
         <Logo />
         <nav className="hidden items-center gap-8 text-sm text-zinc-600 md:flex">
           {LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="link-underline pb-0.5 hover:text-ink">
+            <Link key={l.href} href={l.href} className="link-underline pb-0.5 hover:text-ink">
               {l.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="hidden items-center gap-3 md:flex">
@@ -57,17 +58,18 @@ export function SiteHeader() {
           </span>
         </button>
       </div>
+      {/* Opaque while open: the bar itself is transparent over the hero, so the links would sit on top of it. */}
       <div
-        className={`grid overflow-hidden px-6 transition-[grid-template-rows,opacity] duration-500 ease-[var(--ease-premium)] md:hidden ${
-          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        className={`grid overflow-hidden bg-ivory px-6 transition-[grid-template-rows,opacity] duration-500 ease-[var(--ease-premium)] md:hidden ${
+          open ? "grid-rows-[1fr] border-b border-zinc-200/70 opacity-100" : "grid-rows-[0fr] opacity-0"
         }`}
       >
         <nav className="min-h-0">
           <div className="flex flex-col gap-4 pb-4 pt-6 text-lg">
             {LINKS.map((l) => (
-              <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="font-display">
+              <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="font-display">
                 {l.label}
-              </a>
+              </Link>
             ))}
             <Link href="/login" className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-ink text-sm font-medium text-ivory">
               Request access
