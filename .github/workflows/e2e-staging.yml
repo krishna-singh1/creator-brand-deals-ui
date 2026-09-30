@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
     inputs:
       web_url:
-        description: Staging web origin, e.g. https://staging.branddeal.in
+        description: Staging web origin, e.g. https://staging.exposurestreet.com
         required: true
       api_url:
-        description: Staging API base, e.g. https://api-staging.branddeal.in/api/v1
+        description: Staging API base, e.g. https://api-staging.exposurestreet.com/api/v1
         required: true
       mailpit_url:
         description: Staging Mailpit, e.g. https://mailpit-staging.up.railway.app
