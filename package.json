@@ -18,6 +18,7 @@
     "@tanstack/react-query": "5.103.1",
     "next": "16.3.5",
     "openapi-fetch": "0.17.0",
+    "posthog-js": "1.434.9",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

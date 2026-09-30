@@ -81,7 +81,7 @@ export const privacy: LegalDoc = {
             "Brands see a creator's public profile: display name, photo, niches, city, languages, social handles, numbers, portfolio, ratings and reliability. Never the creator's legal name, date of birth, phone or email before a deal.",
             "After a deal is created, the brand and the creator see each other's contact details and the deal's messages and records.",
             `Our team sees what it needs to verify accounts, resolve disputes and keep the platform safe. Every admin action is logged.`,
-            "Service providers that run parts of the platform for us, under contracts that limit use to our instructions: hosting and database (Railway or Render, Neon), file storage (Cloudflare R2), email delivery (Brevo), sign-in with Google, Instagram (Meta) when you connect it, error monitoring (Sentry), uptime monitoring (Better Stack, which only checks that our pages respond) and product analytics tools.",
+            "Service providers that run parts of the platform for us, under contracts that limit use to our instructions: hosting and database (Railway or Render, Neon), file storage (Cloudflare R2), email delivery (Brevo), sign-in with Google, Instagram (Meta) when you connect it, error monitoring (Sentry), uptime monitoring (Better Stack, which only checks that our pages respond) and product analytics (PostHog, EU region: which pages are visited and a few clicks such as sign-up buttons, linked to your account ID, never your email or name).",
             "Authorities, when the law requires it.",
             "We never sell your data or share it for advertising.",
           ]}
@@ -145,7 +145,7 @@ export const privacy: LegalDoc = {
         <P>
           We use only the cookies the platform needs to keep you signed in: <code>bd_at</code> (a short-lived session, 15 minutes)
           and <code>bd_rt</code> (to renew the session, up to 30 days, sent only to our sign-in endpoints). Both are httpOnly, so
-          scripts can&apos;t read them. We don&apos;t use advertising or cross-site tracking cookies.
+          scripts can&apos;t read them. We don&apos;t use advertising or cross-site tracking cookies, and our product analytics runs without cookies or browser storage.
         </P>
       ),
     },

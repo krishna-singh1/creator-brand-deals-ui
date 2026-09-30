@@ -2346,6 +2346,28 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /admin/insights:
+    get:
+      tags: [admin]
+      operationId: adminGetInsights
+      summary: Funnels and deal economics for a period (from BrandDeal's own data)
+      description: >
+        Funnels follow one group: the creators (or brands) who joined in the last `days` days, and how many of them
+        have reached each step **by now**. Deal economics cover deals created in the period. Money is in paise.
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        '200':
+          description: Insights
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminInsights' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
 components:
   securitySchemes:
     cookieAuth:
@@ -3885,6 +3907,56 @@ components:
         deals: { type: integer }
         completedDeals: { type: integer }
         declaredGmvPaise: { $ref: '#/components/schemas/Paise' }
+    AdminInsights:
+      type: object
+      required: [days, from, to, signups, creatorFunnel, brandFunnel, deals]
+      properties:
+        days: { type: integer }
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        signups:
+          type: object
+          required: [total, noRoleYet]
+          description: Accounts created in the period, and how many still haven't chosen creator or brand
+          properties:
+            total: { type: integer }
+            noRoleYet: { type: integer }
+        creatorFunnel:
+          type: array
+          description: 'Steps in order: SIGNED_UP, PROFILE_COMPLETE, VERIFICATION_SUBMITTED, VERIFIED, APPLIED, DEAL, DEAL_COMPLETED'
+          items: { $ref: '#/components/schemas/FunnelStepCount' }
+        brandFunnel:
+          type: array
+          description: 'Steps in order: SIGNED_UP, PROFILE_COMPLETE, VERIFIED, CAMPAIGN_PUBLISHED, GOT_APPLICANT, DEAL, DEAL_COMPLETED'
+          items: { $ref: '#/components/schemas/FunnelStepCount' }
+        deals: { $ref: '#/components/schemas/DealEconomics' }
+    FunnelStepCount:
+      type: object
+      required: [step, count]
+      properties:
+        step:
+          type: string
+          enum: [SIGNED_UP, PROFILE_COMPLETE, VERIFICATION_SUBMITTED, VERIFIED, APPLIED, CAMPAIGN_PUBLISHED, GOT_APPLICANT,
+            DEAL, DEAL_COMPLETED]
+        count: { type: integer, minimum: 0 }
+    DealEconomics:
+      type: object
+      description: Deals created in the period
+      required: [created, completed, cancelled, disputed, cash, product, productPlusCash, activeBrands, repeatPairDeals]
+      properties:
+        created: { type: integer }
+        completed: { type: integer, description: 'Of the deals created in the period, completed by now' }
+        cancelled: { type: integer }
+        disputed: { type: integer, description: Deals with at least one dispute raised }
+        cash: { type: integer, description: 'Deals by compensation type: cash only' }
+        product: { type: integer, description: Barter (product only) }
+        productPlusCash: { type: integer }
+        activeBrands: { type: integer, description: Brands with at least one deal created in the period }
+        repeatPairDeals: { type: integer, description: Deals whose brand and creator already had an earlier deal }
+        averageCashPaise: { $ref: '#/components/schemas/Paise' }
+        medianCashPaise: { $ref: '#/components/schemas/Paise' }
+        medianDaysToComplete: { type: number, description: 'From deal creation to completion, for those completed' }
+        declaredPaymentsPaise: { $ref: '#/components/schemas/Paise' }
 
     # ─────────── pages ───────────
     MyApplicationPage:

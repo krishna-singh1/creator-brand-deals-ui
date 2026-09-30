@@ -7,6 +7,7 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { PasswordField, PasswordInput } from "@/components/password-input";
 import { Button, ErrorText, Eyebrow, Input, Spinner } from "@/components/ui";
+import { track } from "@/lib/analytics";
 import { api, type Me, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
 import { homeFor, needsOnboarding, useMe, useSetMe } from "@/lib/session";
@@ -61,6 +62,7 @@ export function LoginForm() {
     onSuccess: (res) => {
       if ("next" in res) {
         // Email not verified yet: a code was sent; finishing saves this password.
+        track({ name: "signup_started", props: { method: "password" } });
         setOtp("");
         setResendIn(res.resendAfterSeconds);
         setMode("verify");
