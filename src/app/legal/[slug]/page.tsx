@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { LEGAL_REVIEWED } from "@/lib/legal";
 
+import { PRODUCT } from "@/lib/product";
 import { LEGAL_DOCS } from "../_content";
 
 export function generateStaticParams() {
@@ -14,7 +15,7 @@ export function generateStaticParams() {
 export async function generateMetadata(props: PageProps<"/legal/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
   const doc = LEGAL_DOCS[slug];
-  return { title: `${doc?.title ?? "Legal"} · BrandDeal`, description: doc?.summary };
+  return { title: `${doc?.title ?? "Legal"} · ${PRODUCT.name}`, description: doc?.summary };
 }
 
 export default async function LegalPage(props: PageProps<"/legal/[slug]">) {

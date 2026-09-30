@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: BrandDeal API
+  title: ExposureStreet API
   version: 1.0.0
   summary: Marketplace connecting Indian D2C brands with Instagram/Facebook micro-influencers.
   description: |
@@ -22,7 +22,7 @@ servers:
     description: Deployed API (separate from the web app)
     variables:
       domain:
-        default: branddeal.in
+        default: exposurestreet.com
         description: Parent domain shared by web and API
   - url: http://localhost:8080/api/v1
     description: Local API
@@ -924,7 +924,7 @@ paths:
       summary: Discover verified creators
       description: >
         Verified creators only, biggest audience first. Follower and engagement filters apply to the creator's account on
-        `platform` (any account when not given), using BrandDeal-verified numbers where available. `q` matches the display
+        `platform` (any account when not given), using admin-verified numbers where available. `q` matches the display
         name or a handle.
       parameters:
         - name: categoryId
@@ -2350,7 +2350,7 @@ paths:
     get:
       tags: [admin]
       operationId: adminGetInsights
-      summary: Funnels and deal economics for a period (from BrandDeal's own data)
+      summary: Funnels and deal economics for a period (from ExposureStreet's own data)
       description: >
         Funnels follow one group: the creators (or brands) who joined in the last `days` days, and how many of them
         have reached each step **by now**. Deal economics cover deals created in the period. Money is in paise.

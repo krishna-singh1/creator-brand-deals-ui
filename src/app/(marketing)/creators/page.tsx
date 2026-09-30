@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 
+import { PRODUCT } from "@/lib/product";
 import { ClosingCta, FeatureGrid, PageHero, PlainNote, SectionHeading, StepList, type Feature, type Step } from "../marketing-bits";
 
 export const metadata: Metadata = {
-  title: "For creators — BrandDeal",
+  title: `For creators — ${PRODUCT.name}`,
   description:
     "Get verified once, then choose the brand collaborations that fit. Suggested pricing drawn from your real engagement, cash or barter, and every agreed amount tracked to payment.",
 };
@@ -50,7 +51,7 @@ export default function CreatorsPage() {
             Your work, <span className="italic text-gold-deep">valued properly.</span>
           </>
         }
-        lede="BrandDeal is an invite-only marketplace for India's verified micro-creators. Get reviewed once, then pick the collaborations worth your name — with pricing that starts from your real numbers."
+        lede={`${PRODUCT.name} is an invite-only marketplace for India's verified micro-creators. Get reviewed once, then pick the collaborations worth your name — with pricing that starts from your real numbers.`}
         ctaLabel="Apply as a creator"
         ctaName="creators_hero_apply"
       />
@@ -80,7 +81,7 @@ export default function CreatorsPage() {
         <div className="px-6">
           <PlainNote title="How payment actually works">
             <p>
-              BrandDeal does not hold your money. You agree an amount with the brand and they pay you directly — then both of you
+              {PRODUCT.name} does not hold your money. You agree an amount with the brand and they pay you directly — then both of you
               confirm it here, so there is a dated record of what was agreed and what was received.
             </p>
             <p>

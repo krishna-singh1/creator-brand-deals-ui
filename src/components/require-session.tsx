@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import type { Me } from "@/lib/api/client";
 import { homeFor, needsOnboarding, useMe } from "@/lib/session";
 
+import { PRODUCT } from "@/lib/product";
 import { Skeleton } from "./ui";
 
 type Role = NonNullable<Me["role"]>;
@@ -41,7 +42,7 @@ export function RequireSession({
   }, [redirect, router]);
 
   if (isError) {
-    return <CenteredMessage>Couldn&apos;t reach BrandDeal. Please refresh.</CenteredMessage>;
+    return <CenteredMessage>Couldn&apos;t reach {PRODUCT.name}. Please refresh.</CenteredMessage>;
   }
   if (isPending || redirect || !me) {
     return <PageSkeleton />;

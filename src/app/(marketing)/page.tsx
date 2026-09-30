@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AnimatedWords, Counter, Parallax, Reveal } from "@/components/motion";
 import { Eyebrow } from "@/components/ui";
 
+import { PRODUCT } from "@/lib/product";
 import { HeroVisual } from "./hero-visual";
 import { LaunchNiches } from "./launch-niches";
 import { SpotlightCard } from "./spotlight-card";
@@ -66,7 +67,7 @@ export default function Home() {
               <AnimatedWords text="worth their name." startDelay={420} className="italic" wordClassName="text-gold-gradient pr-[0.08em]" />
             </h1>
             <p className="max-w-xl animate-fade-up text-lg leading-relaxed text-zinc-600 [animation-delay:650ms]">
-              BrandDeal is a curated marketplace for India&apos;s D2C labels and verified micro-creators. Crafted briefs, fairly
+              {PRODUCT.name} is a curated marketplace for India&apos;s D2C labels and verified micro-creators. Crafted briefs, fairly
               priced collaborations, and every deal tracked from first pitch to final payout.
             </p>
             <div className="flex animate-fade-up flex-wrap items-center gap-4 [animation-delay:800ms]">
@@ -110,7 +111,7 @@ export default function Home() {
       <section className="py-28">
         <div className="mx-auto max-w-6xl px-6">
           <Reveal className="mx-auto mb-16 flex max-w-2xl flex-col items-center gap-5 text-center">
-            <Eyebrow>Why BrandDeal</Eyebrow>
+            <Eyebrow>Why {PRODUCT.name}</Eyebrow>
             <h2 className="font-display text-4xl leading-tight tracking-tight sm:text-5xl">
               Collaboration, <span className="italic text-gold-deep">elevated</span>
             </h2>

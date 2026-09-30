@@ -8,6 +8,8 @@ import { type Deal, useDealAction } from "@/lib/deals";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime, formatPaise, rupeesToPaise } from "@/lib/format";
 
+import { PRODUCT } from "@/lib/product";
+
 type PaymentMode = "UPI" | "BANK_TRANSFER" | "OTHER";
 const MODE_LABELS: Record<PaymentMode, string> = { UPI: "UPI", BANK_TRANSFER: "Bank transfer", OTHER: "Other" };
 
@@ -99,7 +101,7 @@ export function PaymentPanel({ deal, isBrand }: { deal: Deal; isBrand: boolean }
 
   return (
     <Card>
-      <SectionTitle title="Payment" subtitle={`Agreed: ${formatPaise(deal.agreedTotalPaise)}. Paid directly, outside BrandDeal.`} />
+      <SectionTitle title="Payment" subtitle={`Agreed: ${formatPaise(deal.agreedTotalPaise)}. Paid directly, outside ${PRODUCT.name}.`} />
       {p ? (
         <dl className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between gap-3">

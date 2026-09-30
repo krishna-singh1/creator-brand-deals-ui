@@ -18,6 +18,8 @@ import { formatCount } from "@/lib/format";
 import { useDebounced } from "@/lib/use-debounced";
 import { isVerifiedSource, verifiedSourceLabel } from "@/lib/verification";
 
+import { PRODUCT } from "@/lib/product";
+
 export default function BrandCreatorsPage() {
   return (
     <RequireSession role="BRAND">
@@ -144,7 +146,7 @@ function CreatorResult({ creator: c }: { creator: CreatorCard }) {
         </dl>
         <p className="mt-auto flex flex-wrap items-center gap-2 text-xs text-zinc-600">
           {isVerifiedSource(c.metricSource) && <span className="uppercase tracking-[0.14em] text-emerald-700">{verifiedSourceLabel(c.metricSource)}</span>}
-          <span>{r.isNew ? "New to BrandDeal" : `${r.completed} deal${r.completed === 1 ? "" : "s"} completed`}</span>
+          <span>{r.isNew ? `New to ${PRODUCT.name}` : `${r.completed} deal${r.completed === 1 ? "" : "s"} completed`}</span>
           {r.oftenCancels && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-900 ring-1 ring-amber-200">Often cancels</span>}
         </p>
       </Card>

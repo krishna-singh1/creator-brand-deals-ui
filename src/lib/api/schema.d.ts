@@ -639,7 +639,7 @@ export interface paths {
         };
         /**
          * Discover verified creators
-         * @description Verified creators only, biggest audience first. Follower and engagement filters apply to the creator's account on `platform` (any account when not given), using BrandDeal-verified numbers where available. `q` matches the display name or a handle.
+         * @description Verified creators only, biggest audience first. Follower and engagement filters apply to the creator's account on `platform` (any account when not given), using admin-verified numbers where available. `q` matches the display name or a handle.
          */
         get: operations["searchCreators"];
         put?: never;
@@ -1635,7 +1635,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Funnels and deal economics for a period (from BrandDeal's own data)
+         * Funnels and deal economics for a period (from ExposureStreet's own data)
          * @description Funnels follow one group: the creators (or brands) who joined in the last `days` days, and how many of them have reached each step **by now**. Deal economics cover deals created in the period. Money is in paise.
          */
         get: operations["adminGetInsights"];

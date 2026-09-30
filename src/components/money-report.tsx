@@ -11,13 +11,15 @@ import { errorMessage } from "@/lib/errors";
 import { formatCount, formatPaise } from "@/lib/format";
 import { istToday, monthLabel, type PaymentReport, PRESETS, type PresetKey, type Range, reportCsv } from "@/lib/money-report";
 
+import { PRODUCT } from "@/lib/product";
+
 type Side = "CREATOR" | "BRAND";
 
 const COPY: Record<Side, { eyebrow: string; title: string; subtitle: string; total: string; counterparty: string; awaiting: string; file: string }> = {
   CREATOR: {
     eyebrow: "Earnings",
     title: "What you've earned",
-    subtitle: "Payments brands recorded for your deals, by payment date. Brands pay you directly, outside BrandDeal.",
+    subtitle: `Payments brands recorded for your deals, by payment date. Brands pay you directly, outside ${PRODUCT.name}.`,
     total: "Earned (confirmed by you)",
     counterparty: "Brand",
     awaiting: "Recorded by brands, waiting for you to confirm",
@@ -26,7 +28,7 @@ const COPY: Record<Side, { eyebrow: string; title: string; subtitle: string; tot
   BRAND: {
     eyebrow: "Spend",
     title: "What you've spent",
-    subtitle: "Payments you recorded on deals, by payment date. You pay creators directly, outside BrandDeal.",
+    subtitle: `Payments you recorded on deals, by payment date. You pay creators directly, outside ${PRODUCT.name}.`,
     total: "Spent",
     counterparty: "Creator",
     awaiting: "Not yet confirmed by creators",

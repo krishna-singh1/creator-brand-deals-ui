@@ -3,10 +3,11 @@ import { Suspense } from "react";
 
 import { AuthLayout } from "@/components/auth-layout";
 
+import { PRODUCT } from "@/lib/product";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
-  title: "Sign in · BrandDeal",
+  title: `Sign in · ${PRODUCT.name}`,
   robots: { index: false },
 };
 

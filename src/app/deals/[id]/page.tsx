@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/campaigns";
 import { CANCELLABLE, type Deal, dealKey, dealSteps, DISPUTABLE, NEXT_ACTION_COPY } from "@/lib/deals";
 import { DELIVERABLE_LABELS, formatDateTime, formatPaise } from "@/lib/format";
 
+import { PRODUCT } from "@/lib/product";
 import { DeliverablesPanel } from "./deliverables-panel";
 import { DisputeBanner, ReportProblem } from "./dispute-panel";
 import { MessagesPanel } from "./messages-panel";
@@ -33,8 +34,8 @@ const EVENT_LABELS: Record<string, string> = {
   REVIEW_SUBMITTED: "Rating left",
   REMINDER_CONTENT_DUE: "Reminder sent: content due soon",
   REMINDER_PAYMENT_PENDING: "Reminder sent: payment pending",
-  DISPUTE_RAISED: "Issue reported to BrandDeal",
-  DISPUTE_RESOLVED: "Issue resolved by BrandDeal",
+  DISPUTE_RAISED: `Issue reported to ${PRODUCT.name}`,
+  DISPUTE_RESOLVED: `Issue resolved by ${PRODUCT.name}`,
 };
 
 export default function DealPage({ params }: { params: Promise<{ id: string }> }) {

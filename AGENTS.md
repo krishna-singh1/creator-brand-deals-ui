@@ -35,7 +35,7 @@ browser. Product docs, the decision log, event flows and the **API contract are 
 - Never read or store auth tokens in JS. They are httpOnly cookies set by the API.
 - Contract changes happen in the API repo first. Then run `npm run contract:sync && npm run api:types` and commit
   `contracts/openapi.yaml` + `src/lib/api/schema.d.ts` together.
-- Env: `NEXT_PUBLIC_API_URL` (e.g. `https://api.branddeal.in/api/v1`). The API's `CORS_ALLOWED_ORIGINS` must include
+- Env: `NEXT_PUBLIC_API_URL` (e.g. `https://api.exposurestreet.com/api/v1`). The API's `CORS_ALLOWED_ORIGINS` must include
   this app's origin, and both must share the parent domain in prod.
 - Money from the API is in paise. Format with `Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' })`.
 

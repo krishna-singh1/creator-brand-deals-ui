@@ -7,6 +7,7 @@ import { Card, PageTitle, SectionTitle, Select, Skeleton } from "@/components/ui
 import { api, type components, unwrap } from "@/lib/api/client";
 import { formatCount, formatDateTime, formatPaise } from "@/lib/format";
 
+import { PRODUCT } from "@/lib/product";
 import { AdminShell } from "../admin-shell";
 
 type Insights = components["schemas"]["AdminInsights"];
@@ -46,7 +47,7 @@ function InsightsView() {
       <PageTitle
         eyebrow="Admin"
         title="Insights"
-        subtitle="How far new creators and brands get, and what deals look like. From BrandDeal's own data; nothing is sent to a third party."
+        subtitle={`How far new creators and brands get, and what deals look like. From ${PRODUCT.name}'s own data; nothing is sent to a third party.`}
       >
         <label className="flex items-center gap-3 text-sm text-zinc-600">
           Period

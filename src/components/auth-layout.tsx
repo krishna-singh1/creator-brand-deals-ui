@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 
+import { PRODUCT } from "@/lib/product";
 import { Logo } from "./logo";
 
 /** Split layout for sign-in and onboarding: editorial brand panel on the left, the task on the right. */
 export function AuthLayout({ children, quote }: { children: ReactNode; quote?: { text: string; by: string } }) {
   const q = quote ?? {
     text: "The finest collaborations begin with a simple introduction.",
-    by: "The BrandDeal promise",
+    by: `The ${PRODUCT.name} promise`,
   };
   return (
     <div className="grid min-h-dvh flex-1 lg:grid-cols-[1fr_1.1fr]">

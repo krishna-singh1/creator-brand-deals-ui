@@ -11,6 +11,8 @@ import { api, type components, type Me, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
 import { useSetMe } from "@/lib/session";
 
+import { PRODUCT } from "@/lib/product";
+
 type ConsentType = components["schemas"]["ConsentType"];
 
 const CONSENT_LABELS: Record<ConsentType, { label: string; href: string }> = {
@@ -124,7 +126,7 @@ function RoleStep({ step, total }: { step: number; total: number }) {
 
   return (
     <div className="flex w-full max-w-2xl animate-fade-up flex-col gap-10">
-      <Header step={step} total={total} title="How will you use BrandDeal?" subtitle="Choose the side of the table you sit on. This can't be changed later." />
+      <Header step={step} total={total} title={`How will you use ${PRODUCT.name}?`} subtitle="Choose the side of the table you sit on. This can't be changed later." />
       <div className="grid gap-5 sm:grid-cols-2">
         {options.map((o, i) => (
           <button

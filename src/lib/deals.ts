@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { PRODUCT } from "@/lib/product";
 import type { components } from "./api/client";
 
 export type Deal = components["schemas"]["Deal"];
@@ -23,7 +24,7 @@ export const NEXT_ACTION_COPY: Record<string, { title: string; body: string }> =
   MARK_PAID: { title: "Pay the creator", body: "Pay off-platform (UPI or bank transfer), then record it here." },
   WAIT_FOR_PAYMENT_CONFIRMATION: { title: "Payment recorded", body: "Waiting for the creator to confirm they received it." },
   CONFIRM_PAYMENT: { title: "Confirm your payment", body: "Check your account, then confirm the payment arrived." },
-  LEAVE_REVIEW: { title: "Rate your partner", body: "A quick rating helps everyone on BrandDeal choose good partners." },
+  LEAVE_REVIEW: { title: "Rate your partner", body: `A quick rating helps everyone on ${PRODUCT.name} choose good partners.` },
 };
 
 /** Progress steps shown on the deal page; product steps only for deals with a product. */

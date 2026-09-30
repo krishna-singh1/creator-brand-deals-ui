@@ -1,3 +1,4 @@
+import { PRODUCT } from "@/lib/product";
 import { ApiRequestError } from "./api/client";
 
 const MESSAGES: Partial<Record<string, string>> = {
@@ -16,18 +17,18 @@ const MESSAGES: Partial<Record<string, string>> = {
   FILE_TYPE_NOT_ALLOWED: "That file type isn't allowed here.",
   FILE_TOO_LARGE: "That file is too large (images up to 5 MB).",
   FILE_NOT_UPLOADED: "The upload didn't finish. Please upload the file again.",
-  BRAND_NOT_VERIFIED: "BrandDeal is still verifying your brand. Publishing and invites unlock once you're verified.",
+  BRAND_NOT_VERIFIED: `${PRODUCT.name} is still verifying your brand. Publishing and invites unlock once you're verified.`,
   VERIFICATION_METHOD_DISABLED: "Verification has changed. Reload the page to see how to verify now.",
   INSTAGRAM_NOT_PROFESSIONAL:
     "Your Instagram is a personal account. Switch it to a Professional (Creator or Business) account in the Instagram app, then connect again.",
-  INSTAGRAM_ACCOUNT_IN_USE: "This Instagram account is already verified on another BrandDeal profile. Contact support if it's yours.",
+  INSTAGRAM_ACCOUNT_IN_USE: `This Instagram account is already verified on another ${PRODUCT.name} profile. Contact support if it's yours.`,
   INSTAGRAM_UNAVAILABLE: "Instagram couldn't be reached. Try again in a few minutes.",
 };
 
 const REASONS: Partial<Record<string, string>> = {
   PLATFORM_ALREADY_ADDED: "You've already added an account on this platform.",
   HANDLE_TAKEN: "This handle is already registered by another creator.",
-  INSTAGRAM_ACCOUNT_IN_USE: "This Instagram account is already verified on another BrandDeal profile.",
+  INSTAGRAM_ACCOUNT_IN_USE: `This Instagram account is already verified on another ${PRODUCT.name} profile.`,
 };
 
 /** User-facing message for an error thrown by the API client (or an upload). */
@@ -60,5 +61,5 @@ export function errorMessage(error: unknown): string {
     return (error.code && MESSAGES[error.code]) || error.body?.message || "Something went wrong.";
   }
   if (error instanceof Error && error.message) return error.message;
-  return "Couldn't reach BrandDeal. Check your connection and try again.";
+  return `Couldn't reach ${PRODUCT.name}. Check your connection and try again.`;
 }

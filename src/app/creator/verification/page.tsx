@@ -15,6 +15,8 @@ import { ME_KEY } from "@/lib/session";
 import { uploadFile } from "@/lib/upload";
 import { useVerificationMethod } from "@/lib/verification";
 
+import { PRODUCT } from "@/lib/product";
+
 export default function VerificationPage() {
   return (
     <RequireSession role="CREATOR">
@@ -131,7 +133,7 @@ function ConnectInstagramCard() {
           Your account must be a <strong className="font-medium text-ink">Professional</strong> account (Creator or Business).
           In the Instagram app: Settings → Account type and tools → Switch to professional account. It&apos;s free.
         </li>
-        <li>Sign in with the same handle that&apos;s on your BrandDeal profile.</li>
+        <li>Sign in with the same handle that&apos;s on your {PRODUCT.name} profile.</li>
         <li>Most accounts are verified straight away; others are checked by our team within 48 hours.</li>
       </ul>
       <div className="flex flex-wrap items-center gap-4">
