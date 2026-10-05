@@ -59,7 +59,7 @@ export function Reveal({
   );
 }
 
-/** Counts up to `value` once visible (ease-out, ~1.6s). */
+/** Counts up to `value` once visible (ease-out, ~1.6s); later changes (e.g. a refetch) show at once. */
 export function Counter({
   value,
   prefix = "",
@@ -74,15 +74,24 @@ export function Counter({
   format?: (n: number) => string;
 }) {
   const [display, setDisplay] = useState(0);
+  const started = useRef(false);
+  const target = useRef(value);
+  useEffect(() => {
+    target.current = value;
+    if (started.current) setDisplay(value);
+  }, [value]);
   const ref = useInView<HTMLSpanElement>(() => {
-    if (prefersReducedMotion()) {
-      setDisplay(value);
+    started.current = true;
+    // Hidden tabs throttle animation frames; show the number rather than a stalled count.
+    if (prefersReducedMotion() || document.hidden) {
+      setDisplay(target.current);
       return;
     }
     const start = performance.now();
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
-      setDisplay(value * (1 - Math.pow(1 - t, 3)));
+    const tick = () => {
+      // Frame timestamps can predate `start`; clamp so the count never dips below zero ("-0").
+      const t = Math.min(1, Math.max(0, (performance.now() - start) / duration));
+      setDisplay(target.current * (1 - Math.pow(1 - t, 3)));
       if (t < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);

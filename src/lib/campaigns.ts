@@ -11,7 +11,7 @@ export type DeliverableType = components["schemas"]["DeliverableType"];
 export type Platform = components["schemas"]["Platform"];
 
 export const COMPENSATION_LABELS: Record<CompensationType, string> = {
-  CASH: "Paid",
+  CASH: "Cash",
   PRODUCT: "Barter",
   PRODUCT_PLUS_CASH: "Product + cash",
 };
@@ -36,7 +36,7 @@ export function formatOffer(c: Offer): string {
   const product = c.productValuePaise != null ? `product worth ${formatPaise(c.productValuePaise)}` : null;
   switch (c.compensationType) {
     case "CASH":
-      return cash ?? "Paid";
+      return cash ?? "Cash";
     case "PRODUCT":
       return product ? capitalize(product) : "Barter";
     default:
@@ -63,7 +63,7 @@ export function formatDeadline(isoDate: string): string {
 }
 
 export function formatDate(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(isoDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
 }
 
 function capitalize(s: string) {

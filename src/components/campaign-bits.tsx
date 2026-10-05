@@ -29,7 +29,7 @@ export function MatchScore({ score, size = 56 }: { score: number; size?: number 
 }
 
 const COMPENSATION_STYLES: Record<CompensationType, string> = {
-  CASH: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  CASH: "bg-white text-ink ring-zinc-300",
   PRODUCT: "bg-cream text-gold-deep ring-gold/30",
   PRODUCT_PLUS_CASH: "bg-ink text-gold-soft ring-ink",
 };

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { components } from "@/lib/api/client";
+import { daysLeft, formatDate } from "@/lib/campaigns";
 
 import { Card } from "./ui";
 
@@ -16,14 +17,17 @@ export function ActionItems({ items, emptyText }: { items: ActionItem[]; emptyTe
       ) : (
         <ul className="flex flex-col gap-3">
           {items.map((item, i) => (
-            <li key={item.type} className="animate-fade-up" style={{ animationDelay: `${120 + i * 90}ms` }}>
+            <li key={`${item.type}-${item.link}`} className="animate-fade-up" style={{ animationDelay: `${120 + i * 90}ms` }}>
               <Link
                 href={item.link}
                 className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-ivory/60 px-6 py-5 transition-all duration-500 ease-[var(--ease-premium)] hover:-translate-y-0.5 hover:border-gold/50 hover:bg-white hover:shadow-lift"
               >
                 <span className="flex items-center gap-4">
-                  <span className="font-display text-lg italic text-gold">0{i + 1}</span>
-                  <span className="font-display text-xl tracking-tight text-ink">{item.title}</span>
+                  <span className="font-display text-lg italic text-gold">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="font-display text-xl tracking-tight text-ink">{item.title}</span>
+                    {item.dueDate && <Due date={item.dueDate} />}
+                  </span>
                 </span>
                 <span
                   aria-hidden
@@ -38,4 +42,11 @@ export function ActionItems({ items, emptyText }: { items: ActionItem[]; emptyTe
       )}
     </Card>
   );
+}
+
+function Due({ date }: { date: string }) {
+  const d = daysLeft(date);
+  const tone = d < 0 ? "text-red-700" : d <= 2 ? "text-amber-800" : "text-zinc-500";
+  const text = d < 0 ? `Overdue since ${formatDate(date)}` : d === 0 ? "Due today" : `Due ${formatDate(date)} · ${d} day${d === 1 ? "" : "s"} left`;
+  return <span className={`text-xs uppercase tracking-[0.12em] ${tone}`}>{text}</span>;
 }

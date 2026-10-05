@@ -1,36 +1,76 @@
 @import "tailwindcss";
 
 /*
- * ExposureStreet design system: charcoal ink, warm ivory, muted gold.
- * The zinc scale is remapped to warm neutrals so every screen shares the same palette.
+ * ExposureStreet design system: onyx ink, warm ivory, champagne gold, with muted jewel tones for status
+ * (sage = done, ochre = waiting, claret = problem). The zinc scale is remapped to warm neutrals so every
+ * screen shares the same palette.
  */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-playfair), ui-serif, Georgia, serif;
 
-  --color-ink: #121212;
-  --color-ink-soft: #1d1c1a;
-  --color-ivory: #faf7f2;
-  --color-cream: #f3ede3;
-  --color-sand: #e6ddcf;
-  --color-gold: #b08d57;
-  --color-gold-soft: #d6bd8e;
-  --color-gold-deep: #8a6a3b;
+  --color-ink: #100f0d;
+  --color-ink-soft: #1f1c18;
+  --color-noir: #17140f;
+  --color-ivory: #f9f6f0;
+  --color-cream: #f2ebdf;
+  --color-sand: #e5dac8;
+  --color-gold: #b48a4a;
+  --color-gold-soft: #dcc193;
+  --color-gold-deep: #85622c;
 
-  --color-zinc-50: #faf7f2;
-  --color-zinc-100: #f3ede3;
-  --color-zinc-200: #e6ddcf;
-  --color-zinc-300: #d3c8b8;
-  --color-zinc-400: #a79d8f;
-  --color-zinc-500: #7a7266;
-  --color-zinc-600: #5c554c;
-  --color-zinc-700: #423d36;
-  --color-zinc-800: #2a2723;
-  --color-zinc-900: #121212;
+  --color-sage: #3d6b55;
+  --color-sage-soft: #e9f1eb;
+  --color-ochre: #8a5a12;
+  --color-ochre-soft: #f7eedb;
+  --color-claret: #8b2f36;
+  --color-claret-soft: #f7e8e7;
 
-  --shadow-soft: 0 1px 2px rgb(18 18 18 / 0.04), 0 8px 24px -12px rgb(18 18 18 / 0.12);
-  --shadow-lift: 0 2px 4px rgb(18 18 18 / 0.05), 0 24px 48px -20px rgb(18 18 18 / 0.25);
-  --shadow-gold: 0 10px 30px -10px rgb(176 141 87 / 0.55);
+  /* Tailwind's status scales remapped to the jewel tones, so existing emerald/amber/red classes stay on-palette. */
+  --color-emerald-50: #eef4ef;
+  --color-emerald-100: #dde9e0;
+  --color-emerald-200: #c3d8ca;
+  --color-emerald-300: #9dbfa9;
+  --color-emerald-500: #5a8a71;
+  --color-emerald-600: #4a7a61;
+  --color-emerald-700: #3d6b55;
+  --color-emerald-800: #2f5644;
+  --color-emerald-900: #233f33;
+  --color-amber-50: #faf3e4;
+  --color-amber-100: #f4e6c8;
+  --color-amber-200: #ead3a6;
+  --color-amber-300: #dbb878;
+  --color-amber-500: #b98634;
+  --color-amber-600: #a06f22;
+  --color-amber-700: #8a5a12;
+  --color-amber-800: #73490d;
+  --color-amber-900: #5e3c0c;
+  --color-red-50: #f9eeed;
+  --color-red-100: #f2dcda;
+  --color-red-200: #e6c0bd;
+  --color-red-300: #d49a96;
+  --color-red-400: #bd6f6b;
+  --color-red-500: #a84a4b;
+  --color-red-600: #973a3f;
+  --color-red-700: #8b2f36;
+  --color-red-800: #72262c;
+  --color-red-900: #5a1f24;
+
+  --color-zinc-50: #f9f6f0;
+  --color-zinc-100: #f2ebdf;
+  --color-zinc-200: #e5dac8;
+  --color-zinc-300: #d2c6b4;
+  --color-zinc-400: #a69b8c;
+  --color-zinc-500: #776f63;
+  --color-zinc-600: #5a534a;
+  --color-zinc-700: #403b34;
+  --color-zinc-800: #292520;
+  --color-zinc-900: #100f0d;
+
+  --shadow-soft: 0 1px 2px rgb(16 15 13 / 0.04), 0 10px 28px -14px rgb(16 15 13 / 0.14), inset 0 1px 0 rgb(255 255 255 / 0.7);
+  --shadow-lift: 0 2px 4px rgb(16 15 13 / 0.05), 0 28px 56px -24px rgb(16 15 13 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.7);
+  --shadow-gold: 0 12px 32px -12px rgb(180 138 74 / 0.6);
+  --shadow-noir: 0 30px 60px -28px rgb(16 15 13 / 0.55);
 
   --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
 
@@ -79,8 +119,31 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Signed-in screens: a faint champagne glow at the top so the ivory reads as paper, not flat beige. */
+.app-backdrop {
+  background:
+    radial-gradient(60rem 28rem at 12% -8rem, rgb(220 193 147 / 0.28), transparent 70%),
+    radial-gradient(48rem 24rem at 100% -6rem, rgb(229 218 200 / 0.55), transparent 70%),
+    var(--color-ivory);
+}
+
+/* Dark feature panels (dashboard heroes, the mobile tab bar). */
+.noir-panel {
+  background:
+    radial-gradient(36rem 18rem at 100% 0%, rgb(180 138 74 / 0.22), transparent 70%),
+    radial-gradient(28rem 16rem at 0% 100%, rgb(180 138 74 / 0.1), transparent 70%),
+    var(--color-noir);
+  color: var(--color-ivory);
+}
+
+/* Fine gold hairline used to separate sections. */
+.hairline {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(180 138 74 / 0.45), transparent);
+}
+
 ::selection {
-  background: rgb(176 141 87 / 0.25);
+  background: rgb(180 138 74 / 0.25);
 }
 
 :focus-visible {

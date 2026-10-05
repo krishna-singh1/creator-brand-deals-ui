@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { InstagramChecks } from "@/components/instagram-checks";
+import { LoadError } from "@/components/load-error";
 import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, SectionTitle, StatusBadge, Textarea } from "@/components/ui";
 import { api, ApiRequestError, unwrap } from "@/lib/api/client";
@@ -30,7 +31,8 @@ export default function VerificationPage() {
 }
 
 function Verification() {
-  const { data: profile } = useQuery({ queryKey: ["creator", "profile"], queryFn: () => unwrap(api.GET("/creator/profile")) });
+  const profileQuery = useQuery({ queryKey: ["creator", "profile"], queryFn: () => unwrap(api.GET("/creator/profile")) });
+  const profile = profileQuery.data;
   const latest = useQuery({
     queryKey: ["creator", "verification"],
     queryFn: async () => {
@@ -43,6 +45,8 @@ function Verification() {
     },
   });
   const method = useVerificationMethod();
+  const failed = profileQuery.error ?? latest.error;
+  if (failed && !profile) return <LoadError error={failed} backHref="/creator" backLabel="Back to home" />;
   if (!profile || latest.isPending || method.isPending) return <ContentSkeleton />;
 
   const request = latest.data;
@@ -79,7 +83,13 @@ function Verification() {
             )}
           </dl>
           {request.status === "PENDING" && (
-            <p className="mt-3 text-sm text-zinc-600">Our team usually reviews within 48 hours. We&apos;ll email you.</p>
+            <p className="mt-3 text-sm text-zinc-600">
+              Our team usually reviews within 48 hours. We&apos;ll email you. Meanwhile, a complete{" "}
+              <Link href="/creator/profile" className="link-underline font-medium text-ink">
+                rate card and portfolio
+              </Link>{" "}
+              help brands say yes faster.
+            </p>
           )}
           {request.instagram && (
             <div className="mt-5 border-t border-zinc-200 pt-5">
@@ -90,8 +100,12 @@ function Verification() {
       )}
 
       {profile.status === "VERIFIED" && (
-        <Card>
-          <p className="text-sm">You&apos;re verified. Brands can now see your profile and you can apply to campaigns.</p>
+        <Card tone="success" className="flex flex-col items-start gap-3">
+          <p className="font-display text-2xl text-ink">You&apos;re verified</p>
+          <p className="text-sm text-zinc-700">Brands can now see your profile and you can apply to campaigns.</p>
+          <Link href="/creator/campaigns" className="link-underline text-sm font-medium text-ink">
+            Browse briefs that match you →
+          </Link>
         </Card>
       )}
 

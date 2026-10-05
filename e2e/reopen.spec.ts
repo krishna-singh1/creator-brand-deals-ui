@@ -33,7 +33,7 @@ test("brand reopens a closed campaign as a new draft, edits it and publishes", a
   await expect(page.getByRole("heading", { name: `${title} (round 2)` })).toBeVisible();
   await expect(page.getByText("draft", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Publish campaign" }).click();
-  await expect(page.getByText("published", { exact: true })).toBeVisible();
+  await expect(page.getByText("live", { exact: true })).toBeVisible();
 
   // The original stays closed with its applicants.
   await page.goto(sourceUrl);

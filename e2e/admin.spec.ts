@@ -46,7 +46,7 @@ test("admin console: suspend and reinstate a user, take down a campaign, see dea
   await campaignRow.getByLabel(/Which guideline does it break/).fill(takedownReason);
   await campaignRow.getByRole("button", { name: "Take down campaign" }).click();
   await admin.getByLabel("Status").selectOption("UNPUBLISHED_BY_ADMIN");
-  await expect(admin.getByRole("row").filter({ hasText: title }).getByText("unpublished by admin")).toBeVisible();
+  await expect(admin.getByRole("row").filter({ hasText: title }).getByText("taken down")).toBeVisible();
 
   // ── Deals and audit trail ──
   await admin.getByRole("link", { name: "Deals" }).click();
