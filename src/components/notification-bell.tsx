@@ -68,7 +68,7 @@ export function NotificationBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 top-11 z-50 w-80 animate-fade-in overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lift">
+        <div className="fixed inset-x-3 top-[4.25rem] z-50 animate-fade-in overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lift sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-96">
           <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
             <span className="font-display text-lg text-ink">Notifications</span>
             {unread > 0 && (
@@ -80,7 +80,7 @@ export function NotificationBell() {
           {(data?.items ?? []).length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-zinc-500">You&apos;re all caught up.</p>
           ) : (
-            <ul className="max-h-96 overflow-y-auto">
+            <ul className="max-h-[min(24rem,70dvh)] overflow-y-auto">
               {data!.items.map((n) => (
                 <li key={n.id}>
                   <button

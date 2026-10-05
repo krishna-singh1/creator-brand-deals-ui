@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { ConfirmButton } from "@/components/confirm-button";
 import { Button, Card, ErrorText, Field, Input, SectionTitle, Select, StatusBadge } from "@/components/ui";
 import { api, type components, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
@@ -26,7 +27,8 @@ export function SocialAccounts() {
     );
 
   const remove = useMutation({
-    mutationFn: (id: string) => api.DELETE("/creator/social-accounts/{socialAccountId}", { params: { path: { socialAccountId: id } } }),
+    mutationFn: (id: string) =>
+      unwrap(api.DELETE("/creator/social-accounts/{socialAccountId}", { params: { path: { socialAccountId: id } } })),
     onSuccess: refresh,
   });
   const missingPlatforms = (["INSTAGRAM", "FACEBOOK"] as Platform[]).filter((p) => !accounts.some((a) => a.platform === p));
@@ -39,15 +41,32 @@ export function SocialAccounts() {
       />
       <div className="flex flex-col gap-3">
         {accounts.map((a) => (
-          <AccountRow key={a.id} account={a} onDelete={() => remove.mutate(a.id)} onSaved={refresh} />
+          <AccountRow
+            key={a.id}
+            account={a}
+            removing={remove.isPending && remove.variables === a.id}
+            onDelete={() => remove.mutate(a.id)}
+            onSaved={refresh}
+          />
         ))}
+        <ErrorText>{remove.isError && errorMessage(remove.error)}</ErrorText>
         {missingPlatforms.length > 0 && <AddAccount platforms={missingPlatforms} onSaved={refresh} />}
       </div>
     </Card>
   );
 }
 
-function AccountRow({ account, onDelete, onSaved }: { account: Account; onDelete: () => void; onSaved: () => void }) {
+function AccountRow({
+  account,
+  removing,
+  onDelete,
+  onSaved,
+}: {
+  account: Account;
+  removing: boolean;
+  onDelete: () => void;
+  onSaved: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   if (editing) {
     return (
@@ -78,9 +97,9 @@ function AccountRow({ account, onDelete, onSaved }: { account: Account; onDelete
         <Button variant="secondary" className="h-9" onClick={() => setEditing(true)}>
           Edit
         </Button>
-        <Button variant="danger" className="h-9" onClick={onDelete}>
-          Remove
-        </Button>
+        <ConfirmButton question="Remove?" className="h-9" pending={removing} onConfirm={onDelete}>
+          {removing ? "Removing…" : "Remove"}
+        </ConfirmButton>
       </div>
     </div>
   );

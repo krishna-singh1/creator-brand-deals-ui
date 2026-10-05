@@ -126,6 +126,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
                 <button
                   type="button"
                   key={c.id}
+                  aria-pressed={on}
                   disabled={!on && form.categoryIds.length >= 3}
                   onClick={() => toggle("categoryIds", c.id)}
                   className={`rounded-full border px-3 py-1 text-sm disabled:opacity-40 ${on ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300"}`}

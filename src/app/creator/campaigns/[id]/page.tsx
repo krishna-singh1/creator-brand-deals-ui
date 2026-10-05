@@ -6,6 +6,7 @@ import { use } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { CampaignBrief } from "@/components/campaign-brief";
+import { LoadError } from "@/components/load-error";
 import { BrandLine, CompensationBadge, MatchScore } from "@/components/campaign-bits";
 import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Card, PageTitle, SectionTitle } from "@/components/ui";
@@ -29,10 +30,11 @@ export default function CreatorCampaignPage({ params }: { params: Promise<{ id: 
 }
 
 function Detail({ id }: { id: string }) {
-  const { data } = useQuery({
+  const { data, isError, error } = useQuery({
     queryKey: ["campaigns", "public", id],
     queryFn: () => unwrap(api.GET("/campaigns/{campaignId}/public", { params: { path: { campaignId: id } } })),
   });
+  if (isError && !data) return <LoadError error={error} backHref="/creator/campaigns" backLabel="All campaigns" />;
   if (!data) return <ContentSkeleton />;
   const { campaign: c, matchScore, suggestedQuote, lowValueOffer } = data;
   const total = suggestedQuote.reduce(

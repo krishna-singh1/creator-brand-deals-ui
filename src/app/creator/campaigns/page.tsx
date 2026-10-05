@@ -8,7 +8,7 @@ import { AppShell } from "@/components/app-shell";
 import { BrandLine, CompensationBadge, MatchScore } from "@/components/campaign-bits";
 import { Reveal } from "@/components/motion";
 import { RequireSession } from "@/components/require-session";
-import { Button, Card, PageTitle, Select, Skeleton } from "@/components/ui";
+import { Button, Card, PageTitle, Select, Skeleton, StatusBadge } from "@/components/ui";
 import { api, ApiRequestError, type components, unwrap } from "@/lib/api/client";
 import { formatDeadline, formatDeliverables, formatOffer } from "@/lib/campaigns";
 import { useCategories } from "@/lib/catalog";
@@ -67,17 +67,28 @@ function Feed() {
       />
 
       {notVerified ? (
-        <Card className="flex flex-col items-start gap-4">
-          <p className="font-display text-2xl text-ink">Get verified to see campaigns</p>
-          <p className="text-sm text-zinc-600">Brands only see verified creators, and campaigns open up once our team has reviewed your profile.</p>
-          <Link href="/creator/verification" className="link-underline text-sm font-medium text-ink">
+        <div className="noir-panel grain overflow-hidden rounded-3xl p-8 shadow-noir sm:p-10">
+          <p className="text-[11px] uppercase tracking-[0.28em] text-gold-soft">One step away</p>
+          <p className="mt-3 max-w-xl font-display text-3xl leading-tight text-ivory sm:text-4xl">Get verified to unlock briefs matched to you</p>
+          <ul className="mt-6 grid gap-3 text-sm text-ivory/80 sm:grid-cols-3">
+            {["Campaigns ranked by fit with your niche and city", "A suggested price for every deliverable", "Brands can find you and invite you"].map((t) => (
+              <li key={t} className="flex items-start gap-2.5">
+                <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-gold" />
+                {t}
+              </li>
+            ))}
+          </ul>
+          <Link
+            href="/creator/verification"
+            className="mt-8 inline-flex h-11 items-center gap-2 rounded-full bg-gold px-6 text-sm font-medium text-ink transition-all duration-300 hover:-translate-y-0.5 hover:bg-gold-soft hover:shadow-gold"
+          >
             Go to verification →
           </Link>
-        </Card>
+        </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-3">
-            <Select className="w-52" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} aria-label="Niche">
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
+            <Select className="w-full sm:w-52" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} aria-label="Niche">
               <option value="">All niches</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -85,13 +96,13 @@ function Feed() {
                 </option>
               ))}
             </Select>
-            <Select className="w-56" value={compensation} onChange={(e) => setCompensation(e.target.value as Compensation | "")} aria-label="Compensation">
+            <Select className="w-full sm:w-56" value={compensation} onChange={(e) => setCompensation(e.target.value as Compensation | "")} aria-label="Compensation">
               <option value="">Any compensation</option>
-              <option value="CASH">Paid</option>
+              <option value="CASH">Cash</option>
               <option value="BARTER">Barter</option>
               <option value="BOTH">Product + cash</option>
             </Select>
-            <Select className="ml-auto w-44" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
+            <Select className="col-span-2 w-full sm:col-span-1 sm:ml-auto sm:w-44" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
               <option value="MATCH">Best match</option>
               <option value="NEWEST">Newest</option>
               <option value="DEADLINE">Closing soon</option>
@@ -119,7 +130,10 @@ function Feed() {
                     <Card interactive className="flex h-full flex-col gap-5">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex min-w-0 flex-col gap-3">
-                          <BrandLine brand={c.brand} />
+                          <span className="flex flex-wrap items-center gap-2">
+                            <BrandLine brand={c.brand} />
+                            {c.myApplicationStatus && <StatusBadge status={c.myApplicationStatus} />}
+                          </span>
                           <p className="font-display text-2xl leading-snug tracking-tight text-ink">{c.title}</p>
                         </div>
                         <MatchScore score={c.matchScore} />

@@ -6,11 +6,12 @@ import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { CompensationBadge } from "@/components/campaign-bits";
+import { LoadError } from "@/components/load-error";
 import { Reveal } from "@/components/motion";
 import { RequireSession } from "@/components/require-session";
 import { Button, Card, PageTitle, Select, Skeleton, StatusBadge } from "@/components/ui";
 import { api, type components, unwrap } from "@/lib/api/client";
-import { formatDeadline, formatDeliverables, formatOffer } from "@/lib/campaigns";
+import { formatDate, formatDeadline, formatDeliverables, formatOffer } from "@/lib/campaigns";
 
 type Status = components["schemas"]["CampaignStatus"];
 
@@ -56,7 +57,9 @@ function Campaigns() {
         </div>
       </PageTitle>
 
-      {query.isPending ? (
+      {query.isError && !query.data ? (
+        <LoadError error={query.error} backHref="/brand" backLabel="Back to dashboard" />
+      ) : query.isPending ? (
         <div className="grid gap-4">
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
@@ -86,7 +89,7 @@ function Campaigns() {
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 text-sm">
-                    <span className="text-zinc-500">{c.status === "PUBLISHED" ? formatDeadline(c.applyBy) : `Apply by ${c.applyBy}`}</span>
+                    <span className="text-zinc-500">{c.status === "PUBLISHED" ? formatDeadline(c.applyBy) : `Apply by ${formatDate(c.applyBy)}`}</span>
                     <span className="text-ink">
                       {c.applicationCount} applications · {c.approvedCount}/{c.creatorsNeeded} creators
                     </span>

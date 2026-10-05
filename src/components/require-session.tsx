@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import type { Me } from "@/lib/api/client";
-import { homeFor, needsOnboarding, useMe } from "@/lib/session";
+import { destinationFor, homeFor, needsOnboarding, safeNext, useMe } from "@/lib/session";
 
 import { PRODUCT } from "@/lib/product";
 import { Skeleton } from "./ui";
@@ -13,7 +13,8 @@ type Role = NonNullable<Me["role"]>;
 
 /**
  * Client-side route guard. The API is the real authority (every call is authorised there); this only decides which
- * screen to show. Signed out → /login, onboarding incomplete → /onboarding, wrong role → that user's home.
+ * screen to show. Signed out → /login, onboarding incomplete → /onboarding (both keep the current URL as `next`),
+ * onboarding done → `next` or home, wrong role → that user's home.
  */
 export function RequireSession({
   role,
@@ -30,7 +31,7 @@ export function RequireSession({
 
   const redirect = (() => {
     if (isPending || isError) return null;
-    if (!me) return `/login?next=${encodeURIComponent(pathname)}`;
+    if (!me) return "/login";
     if (needsOnboarding(me) && !allowOnboarding) return "/onboarding";
     if (!needsOnboarding(me) && allowOnboarding) return homeFor(me);
     if (role && me.role !== role) return homeFor(me);
@@ -38,8 +39,17 @@ export function RequireSession({
   })();
 
   useEffect(() => {
-    if (redirect) router.replace(redirect);
-  }, [redirect, router]);
+    if (!redirect) return;
+    // Read the query string here rather than via useSearchParams, which would need a Suspense boundary on every page.
+    const search = window.location.search;
+    if (redirect === "/login" || redirect === "/onboarding") {
+      router.replace(`${redirect}?next=${encodeURIComponent(pathname + search)}`);
+    } else if (allowOnboarding && me) {
+      router.replace(destinationFor(me, safeNext(new URLSearchParams(search).get("next"))));
+    } else {
+      router.replace(redirect);
+    }
+  }, [redirect, router, pathname, allowOnboarding, me]);
 
   if (isError) {
     return <CenteredMessage>Couldn&apos;t reach {PRODUCT.name}. Please refresh.</CenteredMessage>;

@@ -1,43 +1,55 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { NOTIFICATIONS_KEY } from "@/components/notification-bell";
 import { Button, Card, ErrorText, SectionTitle, Spinner, Textarea } from "@/components/ui";
-import { api, unwrap } from "@/lib/api/client";
+import { api, type components, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 
 const MAX_LENGTH = 2000;
 const POLL_MS = 10_000;
+const PAGE = 30;
+
+type Message = components["schemas"]["DealMessage"];
 
 /**
- * The brand ↔ creator thread on a deal. Polls while the tab is visible, keeps the newest message in view, and marks
- * this deal's message notifications read (so the next message notifies again). Cancelled deals are read-only.
+ * The brand ↔ creator thread on a deal. Polls only the newest page while the tab is visible (earlier pages load on
+ * demand and never change), keeps the newest message in view, and marks this deal's message notifications read (so
+ * the next message notifies again). Cancelled deals are read-only.
  */
 export function MessagesPanel({ dealId, meId, partnerName, readOnly }: { dealId: string; meId: string; partnerName: string; readOnly: boolean }) {
   const queryClient = useQueryClient();
-  const key = ["deals", dealId, "messages"];
-  const thread = useInfiniteQuery({
-    queryKey: key,
-    queryFn: ({ pageParam }) =>
-      unwrap(api.GET("/deals/{dealId}/messages", { params: { path: { dealId }, query: { cursor: pageParam, limit: 30 } } })),
-    initialPageParam: undefined as string | undefined,
+  const latestKey = ["deals", dealId, "messages", "latest"];
+  const page = (cursor?: string) =>
+    unwrap(api.GET("/deals/{dealId}/messages", { params: { path: { dealId }, query: { cursor, limit: PAGE } } }));
+  const latest = useQuery({ queryKey: latestKey, queryFn: () => page(), refetchInterval: POLL_MS });
+  // Earlier messages start from where the newest page ended when the user first asks for them.
+  const [olderFrom, setOlderFrom] = useState<string>();
+  const older = useInfiniteQuery({
+    queryKey: ["deals", dealId, "messages", "older", olderFrom],
+    queryFn: ({ pageParam }) => page(pageParam),
+    initialPageParam: olderFrom,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    refetchInterval: POLL_MS,
+    enabled: !!olderFrom,
+    staleTime: Infinity,
   });
+  const hasEarlier = older.data ? older.hasNextPage : !!latest.data?.nextCursor;
+  const loadingEarlier = older.isFetching;
+  const loadEarlier = () => (older.data ? older.fetchNextPage() : setOlderFrom(latest.data?.nextCursor));
+
   const [draft, setDraft] = useState("");
   const send = useMutation({
     mutationFn: (body: string) => unwrap(api.POST("/deals/{dealId}/messages", { params: { path: { dealId } }, body: { body } })),
     onSuccess: () => {
       setDraft("");
-      queryClient.invalidateQueries({ queryKey: key });
+      queryClient.invalidateQueries({ queryKey: latestKey });
     },
   });
 
-  // Pages are newest first; show oldest → newest.
-  const messages = (thread.data?.pages.flatMap((p) => p.items) ?? []).slice().reverse();
+  const messages = mergeThread(latest.data?.items ?? [], older.data?.pages.flatMap((p) => p.items) ?? []);
   const newestId = messages.at(-1)?.id;
 
   const scroller = useRef<HTMLDivElement>(null);
@@ -56,12 +68,12 @@ export function MessagesPanel({ dealId, meId, partnerName, readOnly }: { dealId:
     <Card className="flex flex-col gap-4">
       <SectionTitle title="Messages" subtitle={readOnly ? "This deal was cancelled, so the thread is read-only." : `Talk to ${partnerName} about this deal.`} />
       <div ref={scroller} className="flex max-h-96 min-h-24 flex-col gap-3 overflow-y-auto pr-1" aria-live="polite" aria-label="Message thread">
-        {thread.hasNextPage && (
-          <button type="button" className="self-center text-xs text-zinc-500 hover:text-ink" onClick={() => thread.fetchNextPage()} disabled={thread.isFetchingNextPage}>
-            {thread.isFetchingNextPage ? "Loading…" : "Load earlier messages"}
+        {hasEarlier && (
+          <button type="button" className="self-center text-xs text-zinc-500 hover:text-ink" onClick={() => loadEarlier()} disabled={loadingEarlier}>
+            {loadingEarlier ? "Loading…" : "Load earlier messages"}
           </button>
         )}
-        {thread.isPending ? (
+        {latest.isPending ? (
           <Spinner />
         ) : messages.length === 0 ? (
           <p className="text-sm text-zinc-500">No messages yet.{readOnly ? "" : " Say hello, or agree on posting dates here."}</p>
@@ -120,6 +132,13 @@ export function MessagesPanel({ dealId, meId, partnerName, readOnly }: { dealId:
       )}
     </Card>
   );
+}
+
+/** Newest page plus earlier pages, de-duplicated by id (they can overlap as new messages arrive), oldest first. */
+function mergeThread(latest: Message[], older: Message[]): Message[] {
+  // Pages are newest first: reversing [latest, older] gives oldest → newest; the sort only guards overlap edges.
+  const byId = new Map([...latest, ...older].reverse().map((m) => [m.id, m]));
+  return [...byId.values()].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
 }
 
 /** Reading the thread clears its unread message notifications, so the next message notifies (and emails) again. */

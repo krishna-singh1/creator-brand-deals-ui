@@ -6,12 +6,13 @@ import { use } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { BrandLine, CompensationBadge } from "@/components/campaign-bits";
+import { LoadError } from "@/components/load-error";
 import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Card, PageTitle, SectionTitle, StatusBadge } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
 import { formatDate } from "@/lib/campaigns";
-import { CANCELLABLE, type Deal, dealKey, dealSteps, DISPUTABLE, NEXT_ACTION_COPY } from "@/lib/deals";
-import { DELIVERABLE_LABELS, formatDateTime, formatPaise } from "@/lib/format";
+import { CANCELLABLE, type Deal, dealKey, dealSteps, DISPUTABLE, formatDealValue, isYourMove, NEXT_ACTION_COPY } from "@/lib/deals";
+import { DELIVERABLE_LABELS, formatDateTime } from "@/lib/format";
 
 import { PRODUCT } from "@/lib/product";
 import { DeliverablesPanel } from "./deliverables-panel";
@@ -52,10 +53,13 @@ export default function DealPage({ params }: { params: Promise<{ id: string }> }
 }
 
 function DealView({ id, isBrand, meId }: { id: string; isBrand: boolean; meId: string }) {
-  const { data: deal } = useQuery({
+  const { data: deal, error } = useQuery({
     queryKey: dealKey(id),
     queryFn: () => unwrap(api.GET("/deals/{dealId}", { params: { path: { dealId: id } } })),
+    // Pick up the other side's moves (content approved, payment recorded) while the page is open.
+    refetchInterval: 30_000,
   });
+  if (error && !deal) return <LoadError error={error} backHref="/deals" backLabel="Back to deals" />;
   if (!deal) return <ContentSkeleton />;
 
   const partnerName = isBrand ? deal.creator.displayName : deal.brand.brandName;
@@ -74,10 +78,15 @@ function DealView({ id, isBrand, meId }: { id: string; isBrand: boolean; meId: s
         <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={deal.status} />
           <CompensationBadge type={deal.compensationType} />
-          <span className="font-display text-2xl text-ink">{formatPaise(deal.agreedTotalPaise)}</span>
+          <span className="font-display text-2xl text-ink">{formatDealValue(deal)}</span>
         </div>
       </PageTitle>
-      {!isBrand && <BrandLine brand={deal.brand} />}
+      <div className="-mt-4 flex flex-wrap items-center justify-between gap-3">
+        {!isBrand ? <BrandLine brand={deal.brand} /> : <span />}
+        <a href="#messages" className="link-underline text-sm text-zinc-600 hover:text-ink lg:hidden">
+          Message {partnerName} ↓
+        </a>
+      </div>
 
       {deal.status !== "CANCELLED" && deal.status !== "DISPUTED" && <Progress deal={deal} />}
       <DisputeBanner deal={deal} />
@@ -90,24 +99,37 @@ function DealView({ id, isBrand, meId }: { id: string; isBrand: boolean; meId: s
       ) : (
         next &&
         deal.status !== "DISPUTED" && (
-          <Card tone="highlight">
-            <p className="font-display text-2xl text-ink">{next.title}</p>
-            <p className="mt-1 text-sm text-zinc-700">{next.body}</p>
-          </Card>
+          <NextStep deal={deal} title={next.title} body={next.body} />
         )
       )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-6">
-          {hasProduct && <ShipmentPanel deal={deal} isBrand={isBrand} />}
-          <DeliverablesPanel deal={deal} isBrand={isBrand} canSubmit={canSubmit} />
-          {hasPayment && <PaymentPanel deal={deal} isBrand={isBrand} />}
-          {deal.status === "COMPLETED" && <ReviewPanel deal={deal} partnerName={partnerName} />}
+          {hasProduct && (
+            <section id="shipment" className="scroll-mt-24">
+              <ShipmentPanel deal={deal} isBrand={isBrand} />
+            </section>
+          )}
+          <section id="content" className="scroll-mt-24">
+            <DeliverablesPanel deal={deal} isBrand={isBrand} canSubmit={canSubmit} />
+          </section>
+          {hasPayment && (
+            <section id="payment" className="scroll-mt-24">
+              <PaymentPanel deal={deal} isBrand={isBrand} />
+            </section>
+          )}
+          {deal.status === "COMPLETED" && (
+            <section id="review" className="scroll-mt-24">
+              <ReviewPanel deal={deal} partnerName={partnerName} />
+            </section>
+          )}
           {CANCELLABLE.includes(deal.status) && nothingSubmitted && <CancelDeal deal={deal} />}
           {DISPUTABLE.includes(deal.status) && <ReportProblem deal={deal} />}
         </div>
         <div className="flex flex-col gap-6">
-          <MessagesPanel dealId={deal.id} meId={meId} partnerName={partnerName} readOnly={deal.status === "CANCELLED"} />
+          <section id="messages" className="scroll-mt-24">
+            <MessagesPanel dealId={deal.id} meId={meId} partnerName={partnerName} readOnly={deal.status === "CANCELLED"} />
+          </section>
           <Card>
             <SectionTitle title={isBrand ? "Creator contact" : "Brand contact"} />
             <dl className="flex flex-col gap-2 text-sm">
@@ -136,27 +158,110 @@ function DealView({ id, isBrand, meId }: { id: string; isBrand: boolean; meId: s
   );
 }
 
+/** Where each next action is done on the page. Labels say "Go to …" so they never repeat the form's own button. */
+const ACTION_TARGET: Record<string, { anchor: string; label: string }> = {
+  SHIP_PRODUCT: { anchor: "shipment", label: "Go to shipping" },
+  CONFIRM_PRODUCT_RECEIVED: { anchor: "shipment", label: "Go to delivery" },
+  SUBMIT_CONTENT: { anchor: "content", label: "Go to your post" },
+  REVIEW_SUBMISSION: { anchor: "content", label: "Go to content" },
+  MARK_PAID: { anchor: "payment", label: "Go to payment" },
+  CONFIRM_PAYMENT: { anchor: "payment", label: "Go to payment" },
+  LEAVE_REVIEW: { anchor: "review", label: "Go to rating" },
+};
+
+/** The banner for whoever's turn it is, with a button that jumps to (and focuses) the form that does it. */
+function NextStep({ deal, title, body }: { deal: Deal; title: string; body: string }) {
+  const target = deal.nextAction ? ACTION_TARGET[deal.nextAction] : undefined;
+  const yourMove = isYourMove(deal);
+  const due =
+    deal.nextAction === "SUBMIT_CONTENT" ? `Go live by ${formatDate(deal.terms.contentWindowEnd)}` : undefined;
+  const jump = () => {
+    const el = target && document.getElementById(target.anchor);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.querySelector<HTMLElement>("input, textarea, select, button")?.focus({ preventScroll: true });
+  };
+  return (
+    <div
+      className={`flex flex-wrap items-center justify-between gap-5 rounded-3xl p-7 ${
+        yourMove ? "noir-panel grain shadow-noir" : "border border-zinc-200/80 bg-white/85 shadow-soft"
+      }`}
+    >
+      <div className="flex max-w-xl flex-col gap-1.5">
+        <p className={`text-[11px] uppercase tracking-[0.24em] ${yourMove ? "text-gold-soft" : "text-gold-deep"}`}>
+          {yourMove ? "Your move" : "Their move"}
+        </p>
+        <p className={`font-display text-2xl ${yourMove ? "text-ivory" : "text-ink"}`}>{title}</p>
+        <p className={`text-sm ${yourMove ? "text-ivory/75" : "text-zinc-700"}`}>
+          {body}
+          {due && <span className={`ml-1 font-medium ${yourMove ? "text-gold-soft" : "text-ink"}`}>{due}.</span>}
+        </p>
+      </div>
+      {yourMove && target && (
+        <button
+          type="button"
+          onClick={jump}
+          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-gold px-6 text-sm font-medium text-ink transition-all duration-300 hover:-translate-y-0.5 hover:bg-gold-soft hover:shadow-gold"
+        >
+          {target.label} <span aria-hidden>↓</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Statuses that mean "this step is under way" rather than "this step is done". */
+const IN_PROGRESS_STEPS = new Set(["IN_PROGRESS", "UNDER_REVIEW"]);
+
 function Progress({ deal }: { deal: Deal }) {
   const steps = dealSteps(deal);
-  const order = steps.map((s) => s.key);
-  const current = deal.status === "COMPLETED" ? order.length - 1 : Math.max(0, order.indexOf(deal.status));
+  const at = steps.findIndex((s) => s.key === deal.status);
+  // Steps up to the reached milestone are done; the one after it (or the step under way) is current.
+  const doneCount =
+    deal.status === "COMPLETED" ? steps.length : at < 0 ? 1 : IN_PROGRESS_STEPS.has(deal.status) ? at : at + 1;
+  const current = Math.min(doneCount, steps.length - 1);
+  const pct = deal.status === "COMPLETED" ? 100 : Math.round((doneCount / (steps.length - 1)) * 100);
   return (
-    <ol className="flex flex-wrap items-center gap-x-2 gap-y-3" aria-label="Deal progress">
-      {steps.map((s, i) => (
-        <li key={s.key} className="flex items-center gap-2">
-          <span
-            className={`grid size-7 place-items-center rounded-full text-xs font-medium transition-colors ${
-              i <= current ? "bg-ink text-gold-soft" : "border border-zinc-300 text-zinc-400"
-            }`}
-            aria-current={i === current ? "step" : undefined}
-          >
-            {i < current || deal.status === "COMPLETED" ? "✓" : i + 1}
-          </span>
-          <span className={`text-sm ${i <= current ? "text-ink" : "text-zinc-400"}`}>{s.label}</span>
-          {i < steps.length - 1 && <span aria-hidden className={`mx-1 h-px w-6 ${i < current ? "bg-ink" : "bg-zinc-300"}`} />}
-        </li>
-      ))}
-    </ol>
+    <div aria-label="Deal progress">
+      {/* Phones: one line of text and a bar. */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        <p className="text-sm text-zinc-600">
+          {deal.status === "COMPLETED" ? (
+            <span className="text-ink">All done</span>
+          ) : (
+            <>
+              Step {current + 1} of {steps.length} · <span className="font-medium text-ink">{steps[current].label}</span>
+            </>
+          )}
+        </p>
+        <div className="h-1.5 overflow-hidden rounded-full bg-cream" aria-hidden>
+          <div className="h-full rounded-full bg-gradient-to-r from-gold-deep to-gold" style={{ width: `${Math.min(100, pct)}%` }} />
+        </div>
+      </div>
+      {/* Larger screens: the full stepper on one line. */}
+      <ol className="hidden items-start sm:flex">
+        {steps.map((s, i) => {
+          const done = i < doneCount;
+          const isCurrent = i === current && deal.status !== "COMPLETED";
+          return (
+            <li key={s.key} className="relative flex flex-1 flex-col items-center gap-2 text-center">
+              {i > 0 && (
+                <span aria-hidden className={`absolute right-1/2 top-3.5 h-px w-full ${i <= doneCount - 1 || isCurrent ? "bg-gold" : "bg-zinc-300"}`} />
+              )}
+              <span
+                aria-current={isCurrent ? "step" : undefined}
+                className={`relative grid size-7 place-items-center rounded-full text-xs font-medium transition-colors ${
+                  done ? "bg-ink text-gold-soft" : isCurrent ? "bg-gold text-ink ring-4 ring-gold/20" : "border border-zinc-300 bg-ivory text-zinc-400"
+                }`}
+              >
+                {done ? "✓" : i + 1}
+              </span>
+              <span className={`text-xs tracking-wide ${done || isCurrent ? "text-ink" : "text-zinc-400"}`}>{s.label}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 

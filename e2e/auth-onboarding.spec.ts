@@ -13,6 +13,7 @@ test("creator signs up with email OTP, onboards, and lands on the creator home",
   await expect(page.getByText("Step 1 of 3")).toBeVisible();
   await createPassword(page);
   await page.getByRole("button", { name: /I'm a creator/ }).click();
+  await page.getByRole("button", { name: "Continue as Creator" }).click();
 
   await expect(page.getByRole("heading", { name: "A few agreements" })).toBeVisible();
   const accept = page.getByRole("button", { name: "Accept and continue" });
@@ -66,6 +67,7 @@ test("expired access token is refreshed transparently", async ({ page, context }
   await signIn(page, email);
   await createPassword(page);
   await page.getByRole("button", { name: /I'm a brand/ }).click();
+  await page.getByRole("button", { name: "Continue as Brand" }).click();
   await expect(page.getByRole("heading", { name: "A few agreements" })).toBeVisible();
   for (const box of await page.getByRole("checkbox").all()) await box.check();
   await page.getByRole("button", { name: "Accept and continue" }).click();

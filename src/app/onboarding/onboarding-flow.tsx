@@ -106,6 +106,7 @@ function PasswordStep({ total }: { total: number }) {
 
 function RoleStep({ step, total }: { step: number; total: number }) {
   const setMe = useSetMe();
+  const [chosen, setChosen] = useState<"CREATOR" | "BRAND" | null>(null);
   const selectRole = useMutation({
     mutationFn: (role: "CREATOR" | "BRAND") => unwrap(api.POST("/me/role", { body: { role } })),
     onSuccess: setMe,
@@ -128,27 +129,55 @@ function RoleStep({ step, total }: { step: number; total: number }) {
     <div className="flex w-full max-w-2xl animate-fade-up flex-col gap-10">
       <Header step={step} total={total} title={`How will you use ${PRODUCT.name}?`} subtitle="Choose the side of the table you sit on. This can't be changed later." />
       <div className="grid gap-5 sm:grid-cols-2">
-        {options.map((o, i) => (
-          <button
-            key={o.role}
-            type="button"
-            disabled={selectRole.isPending}
-            onClick={() => selectRole.mutate(o.role)}
-            style={{ animationDelay: `${150 + i * 120}ms` }}
-            className="group relative flex animate-fade-up flex-col gap-4 overflow-hidden rounded-3xl border border-zinc-200 bg-white/80 p-8 text-left shadow-soft transition-all duration-500 ease-[var(--ease-premium)] hover:-translate-y-1.5 hover:border-gold/50 hover:shadow-lift disabled:opacity-60"
-          >
-            <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-gradient-to-r from-gold-deep to-gold-soft transition-transform duration-500 group-hover:scale-x-100" />
-            <span className="font-display text-sm italic text-gold">{o.role === "CREATOR" ? "Creator" : "Brand"}</span>
-            <span className="font-display text-2xl tracking-tight text-ink">{o.title}</span>
-            <span className="text-sm leading-relaxed text-zinc-600">{o.body}</span>
-            <span className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-ink">
-              Continue
-              <span aria-hidden className="transition-transform duration-300 group-hover:translate-x-1">→</span>
-            </span>
-          </button>
-        ))}
+        {options.map((o, i) => {
+          const on = chosen === o.role;
+          return (
+            <button
+              key={o.role}
+              type="button"
+              aria-pressed={on}
+              disabled={selectRole.isPending}
+              onClick={() => setChosen(o.role)}
+              style={{ animationDelay: `${150 + i * 120}ms` }}
+              className={`group relative flex animate-fade-up flex-col gap-4 overflow-hidden rounded-3xl border p-8 text-left shadow-soft transition-all duration-500 ease-[var(--ease-premium)] hover:-translate-y-1.5 hover:shadow-lift disabled:opacity-60 ${
+                on ? "border-gold bg-gold/5" : "border-zinc-200 bg-white/80 hover:border-gold/50"
+              }`}
+            >
+              <span
+                aria-hidden
+                className={`absolute inset-x-0 top-0 h-0.5 origin-left bg-gradient-to-r from-gold-deep to-gold-soft transition-transform duration-500 group-hover:scale-x-100 ${
+                  on ? "scale-x-100" : "scale-x-0"
+                }`}
+              />
+              <span className="flex items-center justify-between gap-3">
+                <span className="font-display text-sm italic text-gold">{o.role === "CREATOR" ? "Creator" : "Brand"}</span>
+                <span
+                  aria-hidden
+                  className={`grid size-5 place-items-center rounded-full border transition-colors duration-300 ${on ? "border-gold bg-gold" : "border-zinc-300"}`}
+                >
+                  {on && <span className="size-2 rounded-full bg-ink" />}
+                </span>
+              </span>
+              <span className="font-display text-2xl tracking-tight text-ink">{o.title}</span>
+              <span className="text-sm leading-relaxed text-zinc-600">{o.body}</span>
+            </button>
+          );
+        })}
       </div>
-      <ErrorText>{selectRole.isError && errorMessage(selectRole.error)}</ErrorText>
+      <div className="flex flex-col gap-3">
+        <Button className="h-12 self-start" disabled={!chosen || selectRole.isPending} onClick={() => chosen && selectRole.mutate(chosen)}>
+          {selectRole.isPending ? (
+            <>
+              <Spinner /> Saving…
+            </>
+          ) : chosen ? (
+            `Continue as ${chosen === "CREATOR" ? "Creator" : "Brand"}`
+          ) : (
+            "Choose one to continue"
+          )}
+        </Button>
+        <ErrorText>{selectRole.isError && errorMessage(selectRole.error)}</ErrorText>
+      </div>
     </div>
   );
 }

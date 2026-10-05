@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { ConfirmButton } from "@/components/confirm-button";
 import { Button, Card, ErrorText, Field, Input, SectionTitle, Select } from "@/components/ui";
 import { api, type components, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
@@ -24,7 +25,7 @@ export function Portfolio() {
     },
   });
   const remove = useMutation({
-    mutationFn: (id: string) => api.DELETE("/creator/portfolio/{portfolioItemId}", { params: { path: { portfolioItemId: id } } }),
+    mutationFn: (id: string) => unwrap(api.DELETE("/creator/portfolio/{portfolioItemId}", { params: { path: { portfolioItemId: id } } })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
   });
 
@@ -38,9 +39,15 @@ export function Portfolio() {
               {i.brandName ? `${i.brandName} · ` : ""}
               {i.url}
             </a>
-            <Button variant="ghost" className="h-8" onClick={() => remove.mutate(i.id)}>
+            <ConfirmButton
+              question="Remove?"
+              variant="ghost"
+              className="h-8 shrink-0"
+              pending={remove.isPending && remove.variables === i.id}
+              onConfirm={() => remove.mutate(i.id)}
+            >
               Remove
-            </Button>
+            </ConfirmButton>
           </li>
         ))}
       </ul>
@@ -70,6 +77,7 @@ export function Portfolio() {
         </form>
       )}
       <ErrorText>{add.isError && errorMessage(add.error)}</ErrorText>
+      <ErrorText>{remove.isError && errorMessage(remove.error)}</ErrorText>
     </Card>
   );
 }

@@ -11,7 +11,7 @@ import { istToday, PRESETS } from "@/lib/money-report";
 
 import { Button } from "./ui";
 
-export type NavItem = { href: string; label: string };
+export type NavItem = { href: string; label: string; icon?: React.ReactNode };
 
 const ROLE_LABEL: Record<string, string> = { CREATOR: "Creator", BRAND: "Brand", ADMIN: "Admin" };
 
@@ -135,7 +135,7 @@ export function ProfilePanel({
     }`;
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`} aria-hidden={!open} inert={!open}>
+    <div className={`fixed inset-0 z-50 overflow-hidden ${open ? "" : "pointer-events-none"}`} aria-hidden={!open} inert={!open}>
       <div
         className={`absolute inset-0 bg-ink/20 backdrop-blur-[2px] transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
         onClick={onClose}

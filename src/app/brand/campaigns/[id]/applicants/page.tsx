@@ -6,6 +6,7 @@ import { use, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { MatchScore } from "@/components/campaign-bits";
+import { LoadError } from "@/components/load-error";
 import { Reveal } from "@/components/motion";
 import { RequireSession } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, Input, PageTitle, Select, Skeleton, StatusBadge } from "@/components/ui";
@@ -81,11 +82,20 @@ function Applicants({ campaignId }: { campaignId: string }) {
         </Select>
       </div>
 
-      {query.isPending ? (
+      {query.isError && !query.data ? (
+        <LoadError error={query.error} backHref={`/brand/campaigns/${campaignId}`} backLabel="Back to campaign" />
+      ) : query.isPending ? (
         <div className="grid gap-4">
           <Skeleton className="h-48" />
           <Skeleton className="h-48" />
         </div>
+      ) : items.length === 0 && status ? (
+        <Card className="flex flex-col items-start gap-4">
+          <p className="font-display text-2xl text-ink">No applicants match this filter</p>
+          <Button variant="secondary" onClick={() => setStatus("")}>
+            Show all applicants
+          </Button>
+        </Card>
       ) : items.length === 0 ? (
         <Card>
           <p className="font-display text-2xl text-ink">No applicants yet</p>
@@ -111,6 +121,7 @@ function Applicants({ campaignId }: { campaignId: string }) {
 
 function ApplicantCard({ applicant: a, campaignId, paid }: { applicant: Applicant; campaignId: string; paid: boolean }) {
   const [approving, setApproving] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const queryClient = useQueryClient();
   const path = { params: { path: { applicationId: a.id } } };
   const refresh = () => {
@@ -121,16 +132,24 @@ function ApplicantCard({ applicant: a, campaignId, paid }: { applicant: Applican
   const shortlist = useMutation({ mutationFn: () => unwrap(api.POST("/applications/{applicationId}/shortlist", path)), onSuccess: refresh });
   const reject = useMutation({
     mutationFn: (reason: string) => unwrap(api.POST("/applications/{applicationId}/reject", { ...path, body: { reason: reason || undefined } })),
-    onSuccess: refresh,
+    onSuccess: () => {
+      setRejecting(false);
+      refresh();
+    },
   });
   const approve = useMutation({
     mutationFn: (agreedTotalPaise?: number) =>
       unwrap(api.POST("/applications/{applicationId}/approve", { ...path, body: { agreedTotalPaise } })),
-    onSuccess: refresh,
+    onSuccess: () => {
+      refresh();
+      // Approval creates a deal and changes the campaign's approved count.
+      queryClient.invalidateQueries({ queryKey: ["deals", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns", "mine"] });
+    },
   });
-  const error = [shortlist, reject, approve].find((m) => m.isError)?.error;
+  // Approve errors show inside the approve form.
+  const error = [shortlist, reject].find((m) => m.isError)?.error;
   const c = a.creator;
-
 
   return (
     <Card className="flex flex-col gap-5">
@@ -209,6 +228,17 @@ function ApplicantCard({ applicant: a, campaignId, paid }: { applicant: Applican
         />
       )}
 
+      {isOpen(a.status) && rejecting && (
+        <RejectForm
+          pending={reject.isPending}
+          onCancel={() => {
+            setRejecting(false);
+            reject.reset();
+          }}
+          onReject={(reason) => reject.mutate(reason)}
+        />
+      )}
+
       {isOpen(a.status) && (
         <div className="flex flex-wrap items-center gap-3">
           {!approving && <Button onClick={() => setApproving(true)}>Approve</Button>}
@@ -217,16 +247,11 @@ function ApplicantCard({ applicant: a, campaignId, paid }: { applicant: Applican
               Shortlist
             </Button>
           )}
-          <Button
-            variant="danger"
-            disabled={reject.isPending}
-            onClick={() => {
-              const reason = window.prompt("Reject this application? Add an optional note for the creator:", "");
-              if (reason !== null) reject.mutate(reason);
-            }}
-          >
-            Reject
-          </Button>
+          {!rejecting && (
+            <Button variant="danger" onClick={() => setRejecting(true)}>
+              Reject
+            </Button>
+          )}
           <ErrorText>{error && errorMessage(error)}</ErrorText>
         </div>
       )}
@@ -279,6 +304,32 @@ function ApproveForm({
       <div className="flex flex-wrap gap-3">
         <Button type="submit" disabled={!valid || pending}>
           {pending ? "Approving…" : paid ? `Approve at ${valid ? formatPaise(rupeesToPaise(amount)) : "…"}` : "Approve barter deal"}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** Confirms a rejection, with an optional note the creator sees. */
+function RejectForm({ pending, onCancel, onReject }: { pending: boolean; onCancel: () => void; onReject: (reason: string) => void }) {
+  const [reason, setReason] = useState("");
+  return (
+    <form
+      className="flex flex-col gap-4 rounded-2xl border border-red-200 bg-red-50/40 p-5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onReject(reason.trim());
+      }}
+    >
+      <Field label="Note for the creator (optional)" hint="Kind and specific helps them pitch better next time.">
+        <Input maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
+      </Field>
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" variant="danger" disabled={pending}>
+          {pending ? "Rejecting…" : "Confirm reject"}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel

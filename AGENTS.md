@@ -25,7 +25,7 @@ browser. Product docs, the decision log, event flows and the **API contract are 
     tokens from `globals.css`, user-facing error text from `src/lib/errors.ts`, money/date formatting from
     `src/lib/format.ts`.
   - Extract on the second real duplicate; keep it simple otherwise.
-- Navigation: the top bar (`app-shell.tsx`) holds only work pages; personal pages (profile, verification, earnings/spend, account, sign-out) live in the slide-in `components/profile-panel.tsx`, opened from the avatar. It doubles as the mobile menu. In e2e use `openProfileMenu(page)` from `e2e/helpers.ts`.
+- Navigation: the top bar (`app-shell.tsx`) holds only work pages (from `md` up; phones get the same pages in a bottom tab bar); personal pages (profile, verification, earnings/spend, account, sign-out) live in the slide-in `components/profile-panel.tsx`, opened from the avatar. In e2e use `openProfileMenu(page)` from `e2e/helpers.ts`.
 - API URL modes: **direct** (default, ADR 0008): `NEXT_PUBLIC_API_URL=https://api.<domain>/api/v1`. **Proxy**: set
   `API_ORIGIN` and `NEXT_PUBLIC_API_URL=/api/v1`; `next.config.ts` then rewrites `/api/v1/*` to the API so cookies are
   first-party (needed when web and API don't share a parent domain, e.g. two `*.up.railway.app` hosts). Both are
@@ -70,13 +70,20 @@ browser. Product docs, the decision log, event flows and the **API contract are 
   (dummy values are fine); run that file alone, since screenshot submissions in parallel specs get 409 meanwhile.
 
 ## Design system (look & feel)
-- Palette (Tailwind v4 `@theme` in `src/app/globals.css`): `ink` #121212, `ivory` #faf7f2, `cream`, `sand`, `gold` #b08d57
-  (+ `gold-soft`, `gold-deep`). The `zinc-*` scale is remapped to warm neutrals, so existing `zinc` classes stay on-palette.
+- Palette (Tailwind v4 `@theme` in `src/app/globals.css`): `ink` #100f0d, `noir` (dark panels), `ivory` #f9f6f0, `cream`,
+  `sand`, champagne `gold` #b48a4a (+ `gold-soft`, `gold-deep`), and status tones `sage` (done), `ochre` (waiting),
+  `claret` (problem), each with a `-soft` background. The `zinc-*` scale is remapped to warm neutrals and the
+  `emerald-*`/`amber-*`/`red-*` scales to sage/ochre/claret, so existing classes stay on-palette (D-41).
+- Surfaces: `.app-backdrop` (champagne glow behind signed-in screens), `.noir-panel` + `.grain` (dark heroes, the
+  phone tab bar, "Your move" banners), `.hairline`. Don't put a `transform` on a wrapper of `AppShell` (e.g.
+  `template.tsx`): it becomes the containing block for the fixed tab bar, notification sheet and profile panel.
 - Type: `font-display` = Playfair Display (headings, numbers, quotes), `font-sans` = Inter (body). Eyebrows are small
   uppercase gold text with wide tracking (`<Eyebrow>`).
 - Primitives in `src/components/ui.tsx`: `Button` (primary/gold/secondary/ghost/danger, pill, hover lift), `Input`/`Select`/
   `Textarea` (gold focus ring), `Field`, `Switch` (accessible on/off, `role="switch"`), `Card` (`interactive` lifts), `PageTitle`, `SectionTitle`, `StatusBadge`,
-  `Spinner`, `Skeleton`.
+  `Spinner`, `Skeleton`. `StatusBadge` maps enums to short human labels (e.g. PUBLISHED → "live"). Dashboards:
+  `components/dashboard.tsx` (`DashboardHero` with KPIs, `ProgressChecklist`), `components/deals-needing-you.tsx`;
+  `LoadError`, `ConfirmButton` (inline "Delete? Yes / Cancel").
 - Motion in `src/components/motion.tsx` (no animation library): `Reveal` (scroll reveal via IntersectionObserver,
   `delay` to stagger), `Counter`, `Parallax`, `AnimatedWords`, `useScrolled`. CSS keyframes: `animate-fade-up`,
   `animate-fade-in`, `animate-page-in`, `animate-float`. Route changes fade in via `src/app/template.tsx`.

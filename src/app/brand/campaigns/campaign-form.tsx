@@ -31,7 +31,9 @@ type FormState = ReturnType<typeof initialState>;
 
 function initialState(c?: Campaign) {
   const toRupees = (p?: number) => (p == null ? "" : String(p / 100));
-  const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  // Today's IST calendar date as UTC midnight, so day arithmetic and toISOString can't drift a day.
+  const todayIst = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }));
+  const inDays = (n: number) => new Date(todayIst.getTime() + n * 86_400_000).toISOString().slice(0, 10);
   return {
     title: c?.title ?? "",
     description: c?.description ?? "",
@@ -236,10 +238,10 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
             {f.compensationType !== "PRODUCT" && (
               <>
                 <Field label="Cash budget from (₹)">
-                  <Input required type="number" min={0} step={100} value={f.budgetMin} onChange={(e) => set("budgetMin", e.target.value)} />
+                  <Input required type="number" min={0} step={1} value={f.budgetMin} onChange={(e) => set("budgetMin", e.target.value)} />
                 </Field>
                 <Field label="Up to (₹, optional)">
-                  <Input type="number" min={0} step={100} value={f.budgetMax} onChange={(e) => set("budgetMax", e.target.value)} />
+                  <Input type="number" min={0} step={1} value={f.budgetMax} onChange={(e) => set("budgetMax", e.target.value)} />
                 </Field>
               </>
             )}
@@ -263,10 +265,10 @@ export function CampaignForm({ campaign }: { campaign?: Campaign }) {
         <div className="flex flex-col gap-5">
           <div className="grid gap-5 sm:grid-cols-3">
             <Field label="Followers from">
-              <Input required disabled={live} type="number" min={0} step={1000} value={f.followersMin} onChange={(e) => set("followersMin", e.target.value)} />
+              <Input required disabled={live} type="number" min={0} step={1} value={f.followersMin} onChange={(e) => set("followersMin", e.target.value)} />
             </Field>
             <Field label="Followers up to">
-              <Input required disabled={live} type="number" min={0} step={1000} value={f.followersMax} onChange={(e) => set("followersMax", e.target.value)} />
+              <Input required disabled={live} type="number" min={0} step={1} value={f.followersMax} onChange={(e) => set("followersMax", e.target.value)} />
             </Field>
             <Field label="Creators needed" hint={live ? `At least ${campaign?.approvedCount ?? 0}: that many are approved.` : undefined}>
               <Input

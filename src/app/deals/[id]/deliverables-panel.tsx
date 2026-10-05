@@ -4,11 +4,11 @@ import { useState } from "react";
 
 import { Button, Card, ErrorText, Field, Input, SectionTitle, StatusBadge, Textarea } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
-import { type Deal, type DealDeliverable, dealKey } from "@/lib/deals";
+import { type Deal, type DealDeliverable, useInvalidateDeal } from "@/lib/deals";
 import { errorMessage } from "@/lib/errors";
 import { uploadFile } from "@/lib/upload";
 import { DELIVERABLE_LABELS } from "@/lib/format";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 
 /** Each piece of content owed: creators submit live links, brands approve or request changes. */
 export function DeliverablesPanel({ deal, isBrand, canSubmit }: { deal: Deal; isBrand: boolean; canSubmit: boolean }) {
@@ -27,8 +27,9 @@ export function DeliverablesPanel({ deal, isBrand, canSubmit }: { deal: Deal; is
 }
 
 function DeliverableRow({ dealId, deliverable: d, isBrand, canSubmit }: { dealId: string; deliverable: DealDeliverable; isBrand: boolean; canSubmit: boolean }) {
-  const queryClient = useQueryClient();
-  const refresh = () => queryClient.invalidateQueries({ queryKey: dealKey(dealId) });
+  // Submissions return the submission, not the deal: refetch it, plus the lists and dashboards it shows up in.
+  const invalidate = useInvalidateDeal(dealId);
+  const refresh = () => invalidate();
   const s = d.latestSubmission;
   const label = `${DELIVERABLE_LABELS[d.deliverableType]} #${d.seq}`;
   const needsSubmission = d.status === "PENDING" || d.status === "CHANGES_REQUESTED";

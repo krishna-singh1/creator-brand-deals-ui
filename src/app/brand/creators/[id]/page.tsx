@@ -10,6 +10,7 @@ import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Button, Card, ErrorText, Field, PageTitle, SectionTitle, Select, Textarea } from "@/components/ui";
 import { ApiRequestError, api, unwrap } from "@/lib/api/client";
 import { reliability } from "@/lib/applications";
+import { isVerified, useBrandProfile } from "@/lib/brand";
 import { useCategories } from "@/lib/catalog";
 import type { CreatorPublicProfile } from "@/lib/creators";
 import { errorMessage } from "@/lib/errors";
@@ -140,6 +141,7 @@ function Accounts({ creator: c }: { creator: CreatorPublicProfile }) {
 /** Invite to one of the brand's live campaigns, with an optional note. */
 function InvitePanel({ creatorId, creatorName }: { creatorId: string; creatorName: string }) {
   const queryClient = useQueryClient();
+  const { data: brand } = useBrandProfile();
   const { data: live } = useQuery({
     queryKey: ["campaigns", "mine", "PUBLISHED", "invite"],
     queryFn: () => unwrap(api.GET("/campaigns/mine", { params: { query: { status: "PUBLISHED", limit: 50 } } })),
@@ -150,26 +152,34 @@ function InvitePanel({ creatorId, creatorName }: { creatorId: string; creatorNam
   const [sentTo, setSentTo] = useState<string[]>([]);
   const chosen = campaignId || campaigns[0]?.id || "";
   const invite = useMutation({
-    mutationFn: () =>
+    mutationFn: (campaignId: string) =>
       unwrap(
         api.POST("/campaigns/{campaignId}/invites", {
-          params: { path: { campaignId: chosen } },
+          params: { path: { campaignId } },
           body: { creatorId, message: message.trim() || undefined },
         }),
       ),
-    onSuccess: () => {
-      setSentTo((s) => [...s, chosen]);
+    onSuccess: (_, campaignId) => {
+      setSentTo((s) => [...s, campaignId]);
       setMessage("");
-      queryClient.invalidateQueries({ queryKey: ["applications", "campaign", chosen] });
+      queryClient.invalidateQueries({ queryKey: ["applications", "campaign", campaignId] });
     },
   });
-  const error =
-    invite.error instanceof ApiRequestError && invite.error.code === "APPLICATION_ALREADY_EXISTS"
-      ? `${creatorName} already applied to, or was invited to, that campaign.`
-      : invite.isError
-        ? errorMessage(invite.error)
-        : null;
+  // The "sent" state lives in memory only; after a reload the API's duplicate check tells us instead.
+  const alreadyInvited = invite.error instanceof ApiRequestError && invite.error.code === "APPLICATION_ALREADY_EXISTS";
+  const error = invite.isError && !alreadyInvited ? errorMessage(invite.error) : null;
 
+  if (brand && !isVerified(brand)) {
+    return (
+      <Card tone="highlight">
+        <SectionTitle title="Invite to a campaign" />
+        <p className="text-sm text-zinc-700">Invites unlock once we&apos;ve verified your brand.</p>
+        <Link href="/brand/profile" className="link-underline mt-3 inline-block text-sm font-medium text-ink">
+          Check your verification →
+        </Link>
+      </Card>
+    );
+  }
   if (live && campaigns.length === 0) {
     return (
       <Card tone="highlight">
@@ -187,7 +197,7 @@ function InvitePanel({ creatorId, creatorName }: { creatorId: string; creatorNam
         className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
-          if (chosen) invite.mutate();
+          if (chosen) invite.mutate(chosen);
         }}
       >
         <SectionTitle title="Invite to a campaign" subtitle={`${creatorName} gets an email and can reply with a pitch and quote.`} />
@@ -206,6 +216,8 @@ function InvitePanel({ creatorId, creatorName }: { creatorId: string; creatorNam
         <ErrorText>{error}</ErrorText>
         {sentTo.includes(chosen) ? (
           <p className="text-sm font-medium text-emerald-800">Invite sent. You&apos;ll see them in the campaign&apos;s applicants.</p>
+        ) : alreadyInvited && invite.variables === chosen ? (
+          <p className="text-sm font-medium text-zinc-700">Already invited or applied to this campaign.</p>
         ) : (
           <Button type="submit" disabled={!chosen || invite.isPending}>
             {invite.isPending ? "Sending…" : "Send invite"}

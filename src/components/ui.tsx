@@ -1,9 +1,13 @@
-import type {
-  ButtonHTMLAttributes,
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
-  TextareaHTMLAttributes,
+import {
+  cloneElement,
+  isValidElement,
+  useId,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactElement,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from "react";
 
 /*
@@ -57,13 +61,25 @@ export function Textarea({ className = "", ...props }: TextareaHTMLAttributes<HT
   return <textarea className={`min-h-28 py-3 ${widthOf(className)} ${fieldClass} ${className}`} {...props} />;
 }
 
+/** Label above a control; the hint sits outside the label and is linked with aria-describedby (not read as the name). */
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  const hintId = useId();
+  const control =
+    hint && isValidElement(children)
+      ? cloneElement(children as ReactElement<{ "aria-describedby"?: string }>, { "aria-describedby": hintId })
+      : children;
   return (
-    <label className="flex flex-col gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-zinc-600">
-      {label}
-      <span className="normal-case tracking-normal">{children}</span>
-      {hint && <span className="text-xs font-normal normal-case tracking-normal text-zinc-500">{hint}</span>}
-    </label>
+    <div className="flex flex-col gap-2">
+      <label className="flex flex-col gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-zinc-600">
+        {label}
+        <span className="normal-case tracking-normal">{control}</span>
+      </label>
+      {hint && (
+        <span id={hintId} className="text-xs font-normal text-zinc-500">
+          {hint}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -90,8 +106,8 @@ export function SuccessText({ children }: { children?: ReactNode }) {
 }
 
 const CARD_TONES = {
-  default: "border-zinc-200/80 bg-white/80",
-  highlight: "border-gold/40 bg-[#fbf6ec]",
+  default: "border-zinc-200/80 bg-white/85",
+  highlight: "border-gold/40 bg-[linear-gradient(135deg,#fcf7ee,#f6ecda)]",
   success: "border-emerald-200 bg-white/80",
   warning: "border-amber-200 bg-white/80",
   danger: "border-red-200 bg-white/80",
@@ -185,34 +201,67 @@ export function SectionTitle({ title, subtitle }: { title: string; subtitle?: st
   );
 }
 
+const GOOD = "bg-sage-soft text-sage ring-sage/25";
+const WAITING = "bg-ochre-soft text-ochre ring-ochre/25";
+const PROBLEM = "bg-claret-soft text-claret ring-claret/25";
+const GOLD = "bg-gold/10 text-gold-deep ring-gold/40";
+const QUIET = "bg-cream text-zinc-600 ring-zinc-200";
+
 const BADGE_STYLES: Record<string, string> = {
-  VERIFIED: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  APPROVED: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  PENDING_VERIFICATION: "bg-amber-50 text-amber-900 ring-amber-200",
-  PENDING: "bg-amber-50 text-amber-900 ring-amber-200",
-  REJECTED: "bg-red-50 text-red-700 ring-red-200",
-  SUSPENDED: "bg-red-50 text-red-700 ring-red-200",
-  PUBLISHED: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  APPLIED: "bg-amber-50 text-amber-900 ring-amber-200",
-  SHORTLISTED: "bg-gold/10 text-gold-deep ring-gold/40",
-  INVITED: "bg-gold/10 text-gold-deep ring-gold/40",
-  ACTIVE: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  COMPLETED: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  CANCELLED: "bg-red-50 text-red-700 ring-red-200",
-  UNSUBMITTED: "bg-zinc-100 text-zinc-600 ring-zinc-200",
-  DISPUTED: "bg-amber-50 text-amber-900 ring-amber-200",
-  OPEN: "bg-amber-50 text-amber-900 ring-amber-200",
-  RESOLVED: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  UNPUBLISHED_BY_ADMIN: "bg-red-50 text-red-700 ring-red-200",
-  DELETED: "bg-zinc-100 text-zinc-500 ring-zinc-200",
+  VERIFIED: GOOD,
+  APPROVED: GOOD,
+  PUBLISHED: GOOD,
+  ACTIVE: GOOD,
+  COMPLETED: GOOD,
+  RESOLVED: GOOD,
+  CONTENT_APPROVED: GOOD,
+  PENDING_VERIFICATION: WAITING,
+  PENDING: WAITING,
+  APPLIED: WAITING,
+  DISPUTED: WAITING,
+  OPEN: WAITING,
+  UNDER_REVIEW: WAITING,
+  SUBMITTED: WAITING,
+  CHANGES_REQUESTED: WAITING,
+  PAYMENT_MARKED: WAITING,
+  SHORTLISTED: GOLD,
+  INVITED: GOLD,
+  IN_PROGRESS: GOLD,
+  PRODUCT_SHIPPED: GOLD,
+  PRODUCT_RECEIVED: GOLD,
+  REJECTED: PROBLEM,
+  SUSPENDED: PROBLEM,
+  CANCELLED: PROBLEM,
+  UNPUBLISHED_BY_ADMIN: PROBLEM,
+  UNSUBMITTED: QUIET,
+  DRAFT: QUIET,
+  CLOSED: QUIET,
+  WITHDRAWN: QUIET,
+  EXPIRED: QUIET,
+  DELETED: QUIET,
 };
 
-export function StatusBadge({ status }: { status: string }) {
-  const style = BADGE_STYLES[status] ?? "bg-cream text-zinc-700 ring-zinc-200";
+/** Human labels for API statuses; anything missing falls back to the lower-cased enum. */
+const BADGE_LABELS: Record<string, string> = {
+  PENDING_VERIFICATION: "in review",
+  UNSUBMITTED: "not submitted",
+  UNPUBLISHED_BY_ADMIN: "taken down",
+  IN_PROGRESS: "creating",
+  UNDER_REVIEW: "in review",
+  CONTENT_APPROVED: "content approved",
+  PAYMENT_MARKED: "payment sent",
+  PRODUCT_SHIPPED: "shipped",
+  PRODUCT_RECEIVED: "received",
+  CHANGES_REQUESTED: "changes asked",
+  PUBLISHED: "live",
+};
+
+export function StatusBadge({ status, label }: { status: string; label?: string }) {
+  const style = BADGE_STYLES[status] ?? QUIET;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] ring-1 ${style}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] ring-1 ${style}`}>
       <span aria-hidden className="size-1.5 rounded-full bg-current opacity-70" />
-      {status.replaceAll("_", " ").toLowerCase()}
+      {label ?? BADGE_LABELS[status] ?? status.replaceAll("_", " ").toLowerCase()}
     </span>
   );
 }

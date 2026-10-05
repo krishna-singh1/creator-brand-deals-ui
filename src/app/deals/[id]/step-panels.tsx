@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Button, Card, ErrorText, Field, Input, SectionTitle, Select, Textarea } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
+import { formatDate } from "@/lib/campaigns";
 import { type Deal, useDealAction } from "@/lib/deals";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime, formatPaise, rupeesToPaise } from "@/lib/format";
@@ -111,7 +112,7 @@ export function PaymentPanel({ deal, isBrand }: { deal: Deal; isBrand: boolean }
           <div className="flex justify-between gap-3">
             <dt className="text-zinc-500">Paid on</dt>
             <dd className="text-ink">
-              {p.paidOn} · {MODE_LABELS[p.mode as PaymentMode]}
+              {formatDate(p.paidOn)} · {MODE_LABELS[p.mode as PaymentMode]}
               {p.reference ? ` · ${p.reference}` : ""}
             </dd>
           </div>

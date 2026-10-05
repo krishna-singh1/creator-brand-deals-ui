@@ -45,3 +45,18 @@ export function homeFor(me: Me): string {
       return "/onboarding";
   }
 }
+
+/**
+ * Only same-app relative paths are allowed as post-login redirects (no open redirects): a single leading "/", no
+ * backslashes or control characters (browsers treat "/\evil.com" and "/\t/evil.com" like "//evil.com").
+ */
+export function safeNext(next: string | null | undefined): string | null {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
+  return /[\\\u0000-\u001f\u007f]/.test(next) ? null : next;
+}
+
+/** Where to go after signing in or finishing onboarding: `next` if given, through onboarding first when it's pending. */
+export function destinationFor(me: Me, next: string | null): string {
+  if (!next || next.startsWith("/onboarding") || next.startsWith("/login")) return homeFor(me);
+  return needsOnboarding(me) ? `/onboarding?next=${encodeURIComponent(next)}` : next;
+}

@@ -69,7 +69,7 @@ test("creator completes profile, submits proofs, admin approves, creator is veri
 
   // ── Creator sees the result ──
   await creator.goto("/creator/verification");
-  await expect(creator.getByText("You're verified.")).toBeVisible();
+  await expect(creator.getByText("You're verified", { exact: true })).toBeVisible();
   await creator.goto("/creator/profile");
   await expect(creator.getByText("Suggested ₹3,000–₹7,000").first()).toBeVisible();
   await expect(creator.getByText("(est.)")).toHaveCount(0);
