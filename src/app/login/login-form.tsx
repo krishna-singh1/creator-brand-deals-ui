@@ -10,7 +10,7 @@ import { Button, ErrorText, Eyebrow, Input, Spinner } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { api, type Me, unwrap } from "@/lib/api/client";
 import { errorMessage } from "@/lib/errors";
-import { homeFor, needsOnboarding, useMe, useSetMe } from "@/lib/session";
+import { destinationFor, safeNext, useMe, useSetMe } from "@/lib/session";
 
 import { PRODUCT } from "@/lib/product";
 import { GoogleButton } from "./google-button";
@@ -41,7 +41,8 @@ export function LoginForm() {
   const [newPassword, setNewPassword] = useState("");
   const [resendIn, setResendIn] = useState(0);
 
-  const goHome = (me: Me) => router.replace(needsOnboarding(me) || !next ? homeFor(me) : next);
+  // A pending onboarding runs first and carries `next` through (see RequireSession).
+  const goHome = (me: Me) => router.replace(destinationFor(me, next));
   const signedIn = (me: Me) => {
     setMe(me);
     goHome(me);
@@ -441,8 +442,3 @@ function Divider() {
 }
 
 const requestCode = (email: string) => unwrap(api.POST("/auth/otp/request", { body: { email } }));
-
-/** Only allow same-app relative paths as post-login redirects (no open redirects). */
-function safeNext(next: string | null): string | null {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : null;
-}

@@ -67,7 +67,7 @@ function RateCardForm({ data }: { data: RateCardData }) {
               <Input
                 type="number"
                 min={0}
-                step={100}
+                step={1}
                 placeholder="₹"
                 value={prices[entry.deliverableType] ?? ""}
                 onChange={(e) => setPrices((p) => ({ ...p, [entry.deliverableType]: e.target.value }))}

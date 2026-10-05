@@ -106,6 +106,7 @@ export async function signUpToAgreements(page: Page, email: string, role: "creat
   await expect(page).toHaveURL(/\/onboarding$/);
   await expect(page.getByText("Step 1 of 2")).toBeVisible();
   await page.getByRole("button", { name: role === "creator" ? /I'm a creator/ : /I'm a brand/ }).click();
+  await page.getByRole("button", { name: role === "creator" ? "Continue as Creator" : "Continue as Brand" }).click();
   await expect(page.getByRole("heading", { name: "A few agreements" })).toBeVisible();
 }
 

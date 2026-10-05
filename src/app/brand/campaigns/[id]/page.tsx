@@ -9,6 +9,8 @@ import { AppShell } from "@/components/app-shell";
 import { BrandVerificationNotice } from "@/components/brand-verification-notice";
 import { CampaignBrief } from "@/components/campaign-brief";
 import { CompensationBadge } from "@/components/campaign-bits";
+import { ConfirmButton } from "@/components/confirm-button";
+import { LoadError } from "@/components/load-error";
 import { ContentSkeleton, RequireSession } from "@/components/require-session";
 import { Button, ErrorText, PageTitle, StatusBadge } from "@/components/ui";
 import { api, unwrap } from "@/lib/api/client";
@@ -35,7 +37,7 @@ function Detail({ id }: { id: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const key = ["campaigns", id];
-  const { data: c } = useQuery({
+  const { data: c, isError, error: loadError } = useQuery({
     queryKey: key,
     queryFn: () => unwrap(api.GET("/campaigns/{campaignId}", { params: { path: { campaignId: id } } })),
   });
@@ -58,13 +60,14 @@ function Detail({ id }: { id: string }) {
     },
   });
   const remove = useMutation({
-    mutationFn: () => api.DELETE("/campaigns/{campaignId}", path),
+    mutationFn: () => unwrap(api.DELETE("/campaigns/{campaignId}", path)),
     onSuccess: () => {
       refresh();
       router.replace("/brand/campaigns");
     },
   });
 
+  if (isError && !c) return <LoadError error={loadError} backHref="/brand/campaigns" backLabel="All campaigns" />;
   if (!c) return <ContentSkeleton />;
   const verified = isVerified(brand);
   const error = [publish, close, remove, reopen].find((m) => m.isError)?.error;
@@ -99,13 +102,9 @@ function Detail({ id }: { id: string }) {
             >
               Edit draft
             </Link>
-            <Button
-              variant="danger"
-              disabled={remove.isPending}
-              onClick={() => window.confirm("Delete this draft? This can't be undone.") && remove.mutate()}
-            >
-              Delete
-            </Button>
+            <ConfirmButton question="Delete this draft?" pending={remove.isPending} onConfirm={() => remove.mutate()}>
+              {remove.isPending ? "Deleting…" : "Delete"}
+            </ConfirmButton>
           </>
         )}
         {c.status !== "DRAFT" && (

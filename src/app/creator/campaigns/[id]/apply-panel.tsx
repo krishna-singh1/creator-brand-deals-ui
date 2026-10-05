@@ -132,7 +132,7 @@ function ApplyForm({ data, onApplied, inviteId }: { data: CampaignForCreator; on
                 <Input
                   type="number"
                   min={0}
-                  step={100}
+                  step={1}
                   required
                   value={prices[d.deliverableType]}
                   onChange={(e) => setPrices((p) => ({ ...p, [d.deliverableType]: e.target.value }))}
