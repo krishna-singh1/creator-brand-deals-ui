@@ -246,11 +246,16 @@ function Progress({ deal }: { deal: Deal }) {
           return (
             <li key={s.key} className="relative flex flex-1 flex-col items-center gap-2 text-center">
               {i > 0 && (
-                <span aria-hidden className={`absolute right-1/2 top-3.5 h-px w-full ${i <= doneCount - 1 || isCurrent ? "bg-gold" : "bg-zinc-300"}`} />
+                // From the previous circle's edge to this one's, with a small gap: never drawn under a number.
+                <span
+                  aria-hidden
+                  className={`absolute top-3.5 h-px ${i <= doneCount - 1 || isCurrent ? "bg-gold" : "bg-zinc-300"}`}
+                  style={{ left: "calc(-50% + 1.375rem)", right: "calc(50% + 1.375rem)" }}
+                />
               )}
               <span
                 aria-current={isCurrent ? "step" : undefined}
-                className={`relative grid size-7 place-items-center rounded-full text-xs font-medium transition-colors ${
+                className={`relative z-10 grid size-7 place-items-center rounded-full text-xs font-medium transition-colors ${
                   done ? "bg-ink text-gold-soft" : isCurrent ? "bg-gold text-ink ring-4 ring-gold/20" : "border border-zinc-300 bg-ivory text-zinc-400"
                 }`}
               >
